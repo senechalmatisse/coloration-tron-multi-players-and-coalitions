@@ -1,0 +1,11 @@
+# Un joueur Paranoid contre une coalition coordonnee de 3 joueurs (profil Equipe, alpha = 1).
+name: solo_vs_3
+grid: 20
+seed: 3
+placement: {mode: regular, rotate: true}
+heuristic: {name: voronoi, tie: order}
+players:
+  - {name: solo, team: solo, agent: paranoid, depth: 8}
+  - {name: c1, team: coalition, agent: social, depth: 3, profile: team, alpha: 1.0}
+  - {name: c2, team: coalition, agent: social, depth: 3, profile: team, alpha: 1.0}
+  - {name: c3, team: coalition, agent: social, depth: 3, profile: team, alpha: 1.0}

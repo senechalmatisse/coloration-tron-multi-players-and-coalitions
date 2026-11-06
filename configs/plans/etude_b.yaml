@@ -1,0 +1,19 @@
+# Etude B : equipes contre equipes (section 7.2).
+# Profondeur de l'equipe T0 contre celle de T1 (T2 eventuelle : depth par defaut).
+name: etude_b
+description: Equipes contre equipes, profil Equipe (alpha = 1) contre chacun pour soi (MaxN).
+scenario: teams
+games: 100
+seed: 2027
+seats: cyclic
+base:
+  alpha: 1.0
+  depth: 2
+  placement: {mode: regular, rotate: true}
+  heuristic: {name: voronoi, tie: order}
+factors:
+  composition: ["2v2", "3v3", "2v4", "1v2v3", "2v2v2"]
+  mode: [team, maxn]
+  depth_t0: [2, 4, 6, 8]
+  depth_t1: [1, 2, 3, 4]
+  grid: [10, 20, 40]

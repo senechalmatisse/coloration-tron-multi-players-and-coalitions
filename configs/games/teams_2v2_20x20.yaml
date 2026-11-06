@@ -1,0 +1,12 @@
+# Deux equipes de deux : equipe coordonnee (SOS, alpha = 1) contre equipe individualiste (MaxN).
+# Les sieges sont entrelaces pour que les equipes jouent en alternance.
+name: teams_2v2
+grid: 20
+seed: 5
+placement: {mode: regular, rotate: true}
+heuristic: {name: voronoi, tie: order}
+players:
+  - {name: a1, team: A, agent: social, depth: 4, profile: team, alpha: 1.0}
+  - {name: b1, team: B, agent: maxn, depth: 4}
+  - {name: a2, team: A, agent: social, depth: 4, profile: team, alpha: 1.0}
+  - {name: b2, team: B, agent: maxn, depth: 4}

@@ -1,7 +1,10 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
+*.py[cod]
 *$py.class
+*.nbi
+*.nbc
 
 # C extensions
 *.so
@@ -11,6 +14,9 @@ __pycache__/
 build/
 develop-eggs/
 dist/
+results/*
+!results/.gitkeep
+screenshots/
 downloads/
 eggs/
 .eggs/
@@ -155,6 +161,7 @@ activemq-data/
 .venv
 env/
 venv/
+.venv/
 ENV/
 env.bak/
 venv.bak/

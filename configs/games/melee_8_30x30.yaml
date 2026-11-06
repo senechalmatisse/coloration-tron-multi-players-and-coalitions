@@ -1,0 +1,16 @@
+# Huit joueurs en quatre equipes de deux sur une grille 30 x 30 (demonstration de l'affichage).
+name: melee_8
+grid: 30
+seed: 11
+placement: {mode: regular, radius: 0.38, rotate: true}
+heuristic: {name: voronoi, tie: order, separation: true}
+defaults: {agent: social, depth: 4, profile: team, alpha: 0.5}
+players:
+  - {name: r1, team: Rouge}
+  - {name: b1, team: Bleu}
+  - {name: v1, team: Vert}
+  - {name: j1, team: Jaune}
+  - {name: r2, team: Rouge}
+  - {name: b2, team: Bleu}
+  - {name: v2, team: Vert}
+  - {name: j2, team: Jaune}

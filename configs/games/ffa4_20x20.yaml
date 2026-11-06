@@ -1,0 +1,11 @@
+# Chacun pour soi a 4 joueurs : un agent de chaque famille.
+name: ffa4_20x20
+grid: 20
+seed: 7
+placement: {mode: regular, rotate: true}
+heuristic: {name: voronoi, tie: order}
+players:
+  - {name: paranoid, agent: paranoid, depth: 6}
+  - {name: maxn, agent: maxn, depth: 6}
+  - {name: glouton, agent: greedy}
+  - {name: hasard, agent: random}

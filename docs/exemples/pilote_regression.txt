@@ -1,0 +1,11 @@
+Régression logistique (numpy-irls) : focus_win ~ log2(solo_depth) + k + log2(solo_depth):k + grid + log2(solo_depth):grid + log2(coalition_depth)
+1152 parties, 12 groupes (graines), convergence : True
+
+                 term    coef  std_err       z  p_value  ci_low  ci_high
+            Intercept  7.1186   1.3722  5.1877   0.0000  4.4291   9.8081
+     log2(solo_depth) -1.2850   0.7126 -1.8033   0.0713 -2.6816   0.1116
+                    k -7.1607   1.0257 -6.9810   0.0000 -9.1711  -5.1503
+   log2(solo_depth):k  0.9525   0.3941  2.4168   0.0157  0.1800   1.7249
+                 grid -0.0106   0.0691 -0.1536   0.8779 -0.1461   0.1248
+log2(solo_depth):grid  0.1042   0.0527  1.9760   0.0481  0.0008   0.2076
+log2(coalition_depth) -0.1027   0.2045 -0.5023   0.6154 -0.5036   0.2981

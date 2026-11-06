@@ -1,0 +1,18 @@
+# Plan pilote : verifie la chaine complete et calibre les temps (jalon J3).
+name: pilote
+description: Etude A reduite (grilles 10 x 10 et 14 x 14) pour valider la chaine et calibrer.
+scenario: solo_vs_coalition
+games: 24
+seed: 7
+seats: cyclic
+base:
+  solo_agent: paranoid
+  coalition_mode: team
+  alpha: 1.0
+  placement: {mode: regular, rotate: true}
+  heuristic: {name: voronoi, tie: order}
+factors:
+  solo_depth: [1, 2, 4, 6]
+  coalition_depth: [1, 2]
+  k: [1, 2, 3]
+  grid: [10, 14]

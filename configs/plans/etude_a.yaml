@@ -1,0 +1,25 @@
+# Etude A : un joueur (Paranoid) contre une coalition de k joueurs (section 7.1).
+# 6 x 4 x 5 x 3 = 360 conditions, 100 parties chacune (200 pour les conditions cles).
+name: etude_a
+description: Influence de la profondeur selon la taille de la coalition et de la grille.
+scenario: solo_vs_coalition
+games: 100
+seed: 2026
+seats: cyclic
+base:
+  solo_agent: paranoid
+  coalition_mode: team      # team (profil Equipe) ou maxn (individualiste)
+  alpha: 1.0
+  depth_unit: plies         # plies (cahier des charges) ou rounds (tours complets)
+  placement: {mode: regular, rotate: true}
+  heuristic: {name: voronoi, tie: order}
+factors:
+  solo_depth: [1, 2, 4, 6, 8, 10]
+  coalition_depth: [1, 2, 3, 4]
+  k: [1, 2, 3, 4, 5]
+  grid: [10, 20, 40]
+design: full
+key_conditions:
+  games: 200
+  where:
+    - {grid: 20, coalition_depth: 2}

@@ -1,0 +1,10 @@
+# Duel Paranoid contre MaxN sur une grille 20 x 20.
+name: duel_20x20
+grid: {width: 20, height: 20}
+seed: 1
+first_player: 0
+placement: {mode: regular, radius: 0.35, rotate: true}
+heuristic: {name: voronoi, tie: order}
+players:
+  - {name: paranoid, team: A, agent: paranoid, depth: 8}
+  - {name: maxn, team: B, agent: maxn, depth: 8}

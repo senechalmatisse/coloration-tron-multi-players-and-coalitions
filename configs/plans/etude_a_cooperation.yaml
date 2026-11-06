@@ -1,0 +1,18 @@
+# Etude A, volet [S] : valeur de la cooperation (coalition coordonnee ou individualiste)
+# et algorithme du solitaire (Paranoid ou MaxN), sur la grille moyenne.
+name: etude_a_cooperation
+scenario: solo_vs_coalition
+games: 100
+seed: 2026
+seats: cyclic
+base:
+  alpha: 1.0
+  placement: {mode: regular, rotate: true}
+  heuristic: {name: voronoi, tie: order}
+factors:
+  coalition_mode: [team, maxn]
+  solo_agent: [paranoid, maxn]
+  solo_depth: [2, 4, 6, 8]
+  coalition_depth: [2, 3]
+  k: [2, 3, 4]
+  grid: [20]

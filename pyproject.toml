@@ -1,0 +1,81 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tron-coalitions"
+version = "1.0.0"
+description = "Tron multi-joueur : simulateur, agents MaxN / Paranoid / SOS, coalitions et campagne d'expériences"
+readme = "README.md"
+requires-python = ">=3.14"
+authors = [{ name = "Projet Coloration IA" }]
+dependencies = [
+    "numpy>=2.3",
+    "numba>=0.63",
+    "pyyaml>=6.0.2",
+    "arcade==3.3.3",
+    "matplotlib>=3.10",
+    "imageio>=2.37",
+    "imageio-ffmpeg>=0.6",
+    "pillow>=11",
+    "pandas>=2.3",
+    "scipy>=1.16",
+    "statsmodels>=0.14.5",
+    "tqdm>=4.67",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.4",
+    "pytest-cov>=7",
+    "ruff>=0.14",
+    "mypy>=1.18",
+    "types-PyYAML",
+    "jupyter>=1.1",
+]
+
+[project.scripts]
+tron = "tron.cli.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "tests"]
+addopts = "-q"
+markers = ["slow: tests longs (statistiques, campagnes)"]
+
+[tool.coverage.run]
+source = ["tron"]
+omit = ["src/tron/viz/arcade_app.py"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"  # syntaxe compatible 3.13 ; exécution cible : Python 3.14
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "N", "PL"]
+ignore = [
+    "PLR0911", "PLR0912", "PLR0913", "PLR0915", "PLR0917", "PLR2004", "PLW2901",
+    "RUF001", "RUF002", "RUF003", "N803", "N806", "SIM108",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["PLR2004", "PLC0415"]
+"src/tron/viz/arcade_app.py" = ["PLC0415"]
+
+[tool.mypy]
+python_version = "3.14"
+mypy_path = "src"
+packages = ["tron"]
+warn_unused_ignores = true
+warn_redundant_casts = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = ["numba.*", "yaml.*", "arcade.*", "imageio.*", "scipy.*", "statsmodels.*", "tqdm.*", "pandas.*", "matplotlib.*"]
+ignore_missing_imports = true

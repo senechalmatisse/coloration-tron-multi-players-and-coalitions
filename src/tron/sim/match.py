@@ -1,0 +1,183 @@
+"""Boucle de partie et observateurs (§6.2, §6.4).
+
+``Match`` demande un coup à l'agent du joueur au trait, l'applique, émet un
+événement vers les observateurs (journal, affichage) et détecte la fin. Le
+moteur ne dépend jamais de l'affichage (F6.5) : la visualisation n'est qu'un
+observateur parmi d'autres.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Sequence
+from dataclasses import dataclass
+from time import perf_counter
+from typing import Protocol
+
+from tron.agents.base import Agent, SearchStats, build_agents
+from tron.core.config import GameConfig
+from tron.core.directions import PASS
+from tron.core.state import GameState
+from tron.eval.voronoi import warmup
+from tron.sim.result import MatchResult, PlayerTotals
+
+_WARMED_UP = False
+
+
+def ensure_warmup() -> None:
+    """Compile (ou charge du cache) les noyaux une fois par processus."""
+    global _WARMED_UP  # noqa: PLW0603 - drapeau de processus
+    if not _WARMED_UP:
+        warmup()
+        _WARMED_UP = True
+
+
+@dataclass(frozen=True, slots=True)
+class MoveEvent:
+    """Un demi-coup joué : déplacement ou élimination."""
+
+    ply: int
+    player: int
+    direction: int
+    origin: tuple[int, int]
+    target: tuple[int, int] | None
+    eliminated: bool
+    stats: SearchStats | None
+
+
+class MatchObserver(Protocol):
+    """Observateur d'une partie (journal, affichage, statistiques…)."""
+
+    def on_start(self, match: Match) -> None: ...
+
+    def on_event(self, match: Match, event: MoveEvent) -> None: ...
+
+    def on_end(self, match: Match, result: MatchResult) -> None: ...
+
+
+class Match:
+    """Une partie entre agents, pilotable coup par coup (``step``) ou d'un bloc (``run``)."""
+
+    def __init__(
+        self,
+        config: GameConfig,
+        agents: Sequence[Agent] | None = None,
+        observers: Sequence[MatchObserver] = (),
+        positions: Sequence[tuple[int, int]] | None = None,
+    ) -> None:
+        ensure_warmup()
+        self.config = config
+        self.state = GameState(config, positions=positions)
+        self.agents = list(agents) if agents is not None else build_agents(config)
+        if len(self.agents) != config.n_players:
+            raise ValueError("un agent par joueur est requis")
+        for agent in self.agents:
+            agent.reset()
+        self.observers: list[MatchObserver] = list(observers)
+        self.events: list[MoveEvent] = []
+        self.result: MatchResult | None = None
+        self._started = False
+        self._t0 = 0.0
+        n = config.n_players
+        self._decisions = [0] * n
+        self._nodes = [0] * n
+        self._time = [0.0] * n
+        self._max_depth = [0] * n
+        self._sum_depth = [0] * n
+
+    def add_observer(self, observer: MatchObserver) -> None:
+        self.observers.append(observer)
+
+    @property
+    def finished(self) -> bool:
+        return self.result is not None
+
+    def start(self) -> None:
+        if not self._started:
+            self._started = True
+            self._t0 = perf_counter()
+            for obs in self.observers:
+                obs.on_start(self)
+
+    def step(self) -> MoveEvent | None:
+        """Joue un demi-coup ; renvoie ``None`` si la partie est terminée."""
+        self.start()
+        st = self.state
+        if st.is_terminal():
+            self._finish()
+            return None
+        p = st.current
+        stats: SearchStats | None = None
+        if st.has_legal_move(p):
+            decision = self.agents[p].choose_move(st.copy(history=False), p)
+            move, stats = decision.move, decision.stats
+            self._decisions[p] += 1
+            self._nodes[p] += stats.nodes
+            self._time[p] += stats.time
+            self._max_depth[p] = max(self._max_depth[p], stats.depth)
+            self._sum_depth[p] += stats.depth
+        else:
+            move = PASS
+        origin = st.head(p)
+        moved = st.apply(move)
+        event = MoveEvent(
+            ply=st.ply - 1,
+            player=p,
+            direction=move,
+            origin=origin,
+            target=st.head(p) if moved else None,
+            eliminated=not moved,
+            stats=stats,
+        )
+        self.events.append(event)
+        for obs in self.observers:
+            obs.on_event(self, event)
+        if st.is_terminal():
+            self._finish()
+        return event
+
+    def run(self) -> MatchResult:
+        """Joue la partie jusqu'au bout."""
+        while self.step() is not None:
+            pass
+        assert self.result is not None
+        return self.result
+
+    def _finish(self) -> None:
+        if self.result is not None:
+            return
+        out = self.state.outcome()
+        assert out is not None
+        cfg = self.config
+        names = cfg.team_names
+        totals = tuple(
+            PlayerTotals(
+                decisions=self._decisions[i],
+                nodes=self._nodes[i],
+                think_time=self._time[i],
+                max_depth=self._max_depth[i],
+                mean_depth=self._sum_depth[i] / self._decisions[i] if self._decisions[i] else 0.0,
+            )
+            for i in range(cfg.n_players)
+        )
+        self.result = MatchResult(
+            name=cfg.name,
+            seed=cfg.seed,
+            first_player=cfg.first_player,
+            width=cfg.width,
+            height=cfg.height,
+            players=tuple(p.name for p in cfg.players),
+            teams=tuple(p.team for p in cfg.players),
+            agents=tuple(a.describe() for a in self.agents),
+            depths=tuple(p.depth for p in cfg.players),
+            winning_team=names[out.winning_team] if out.winning_team >= 0 else "",
+            winners=out.winners,
+            ranks=out.ranks,
+            elimination_order=out.elimination_order,
+            n_moves=out.n_moves,
+            n_plies=out.n_plies,
+            duration=perf_counter() - self._t0,
+            totals=totals,
+            positions=self.state.positions,
+        )
+        for obs in self.observers:
+            obs.on_end(self, self.result)
