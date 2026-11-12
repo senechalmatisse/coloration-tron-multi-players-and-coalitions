@@ -32,6 +32,13 @@ Un **tour complet** se termine quand le joueur suivant à jouer revient, dans
 l'ordre cyclique, au premier joueur de la partie ou avant lui : les tours sont
 comptés depuis ``first_player``, ce qui garde la rotation des sièges équitable.
 
+**Objectifs asymétriques** (clé ``objectives``, modes ``classic`` et ``survival``
+de portée ``team``) : chaque équipe reçoit un objectif. ``eliminate`` (défaut) :
+gagner en restant la dernière équipe en vie ; ``survive`` (``rounds: N``) : gagner
+dès la fin du N-ième tour complet si l'équipe a encore un joueur vivant — ce qui
+impose aux autres équipes de l'éliminer avant. Si plusieurs équipes ``survive``
+atteignent leur objectif, la plus petite durée l'emporte ; à durée égale, égalité.
+
 **Obstacles dynamiques** (clé ``obstacles``, combinable avec tous les modes) :
 à la fin des tours complets du calendrier (``start``, puis tous les ``every``
 tours), ``count`` obstacles apparaissent sur des cases libres, jamais sur une
@@ -62,6 +69,7 @@ from typing import TYPE_CHECKING, Any
 from tron.core.rng import STREAM_OBSTACLES, derive_seed, hash_index
 
 if TYPE_CHECKING:  # pragma: no cover
+    from tron.core.config import GameConfig
     from tron.core.state import GameState
 
 FREE = -1
@@ -69,6 +77,9 @@ FREE = -1
 MODES = ("classic", "survival", "zone_control")
 VICTORY_SCOPES = ("team", "individual")
 ZONE_RULES = ("head",)
+OBJECTIVES = ("eliminate", "survive")
+END_REASONS = ("elimination", "survive", "target_score", "max_rounds")
+"""Causes de fin de partie (colonne ``end_reason``)."""
 OBSTACLE = -3
 """Valeur d'une case occupée par un obstacle dynamique (P09.3)."""
 
@@ -149,6 +160,28 @@ class ObstacleSpec:
 
 
 @dataclass(frozen=True, slots=True)
+class ObjectiveSpec:
+    """Objectif d'une équipe (P09.4) : ``eliminate`` ou ``survive`` pendant ``rounds`` tours."""
+
+    type: str = "eliminate"
+    rounds: int | None = None
+
+    def validate(self, team: str) -> None:
+        if self.type not in OBJECTIVES:
+            raise RulesError(f"objectif inconnu pour {team} : {self.type} (attendu : {OBJECTIVES})")
+        if self.type == "survive" and (self.rounds is None or self.rounds < 1):
+            raise RulesError(f"objectif survive de {team} : rounds ≥ 1 obligatoire")
+        if self.type == "eliminate" and self.rounds is not None:
+            raise RulesError(f"objectif eliminate de {team} : pas de clé rounds")
+
+    def to_dict(self) -> dict[str, Any]:
+        data: dict[str, Any] = {"type": self.type}
+        if self.rounds is not None:
+            data["rounds"] = self.rounds
+        return data
+
+
+@dataclass(frozen=True, slots=True)
 class RulesSpec:
     """Règles d'une partie : mode, portée de la victoire et paramètres du mode."""
 
@@ -160,6 +193,8 @@ class RulesSpec:
     max_rounds: int | None = None
     obstacles: ObstacleSpec | None = None
     """Obstacles dynamiques (P09.3), combinables avec tous les modes."""
+    objectives: tuple[tuple[str, ObjectiveSpec], ...] = ()
+    """Objectif par nom d'équipe (P09.4) ; une équipe absente a l'objectif ``eliminate``."""
 
     @property
     def individual(self) -> bool:
@@ -169,9 +204,18 @@ class RulesSpec:
     @property
     def needs_engine(self) -> bool:
         """Vrai si les règles ont des données d'état propres (tours, scores, obstacles)."""
-        return self.mode == "zone_control" or self.obstacles is not None
+        return (
+            self.mode == "zone_control"
+            or self.obstacles is not None
+            or any(o.type == "survive" for _, o in self.objectives)
+        )
 
-    def validate(self, width: int | None = None, height: int | None = None) -> None:
+    def validate(
+        self,
+        width: int | None = None,
+        height: int | None = None,
+        teams: tuple[str, ...] | None = None,
+    ) -> None:
         if self.mode not in MODES:
             raise RulesError(f"mode de jeu inconnu : {self.mode} (attendu : {MODES})")
         if self.victory_scope not in VICTORY_SCOPES:
@@ -187,6 +231,15 @@ class RulesSpec:
                 raise RulesError(f"{name} doit être ≥ 1 (reçu : {value})")
         if self.obstacles is not None:
             self.obstacles.validate()
+        if self.objectives:
+            if self.mode == "zone_control" or self.victory_scope != "team":
+                raise RulesError(
+                    "objectives n'existe qu'en modes classic et survival de portée team"
+                )
+            for name, objective in self.objectives:
+                if teams is not None and name not in teams:
+                    raise RulesError(f"objectif pour une équipe inconnue : {name} ({teams})")
+                objective.validate(name)
         if self.mode == "zone_control":
             if not self.zones:
                 raise RulesError("le mode zone_control exige au moins une zone")
@@ -213,11 +266,22 @@ class RulesSpec:
             )
         if self.obstacles is not None:
             data["obstacles"] = self.obstacles.to_dict()
+        if self.objectives:
+            data["objectives"] = {name: o.to_dict() for name, o in self.objectives}
         return data
 
 
 _RULES_KEYS = frozenset(
-    {"mode", "victory_scope", "zones", "zone_rule", "target_score", "max_rounds", "obstacles"}
+    {
+        "mode",
+        "victory_scope",
+        "zones",
+        "zone_rule",
+        "target_score",
+        "max_rounds",
+        "obstacles",
+        "objectives",
+    }
 )
 _OBSTACLE_KEYS = frozenset({"every", "count", "start", "max", "margin"})
 
@@ -247,6 +311,32 @@ def _zone(raw: Any) -> ZoneSpec:
     if isinstance(raw, list | tuple) and len(raw) in (2, 4):
         return ZoneSpec(*(_int(v, "zone") for v in raw))
     raise RulesError(f"zone invalide : {raw!r}")
+
+
+def _objectives(raw: Any) -> tuple[tuple[str, ObjectiveSpec], ...]:
+    if raw is None:
+        return ()
+    if not isinstance(raw, Mapping):
+        raise RulesError(f"objectives invalides : {raw!r} (attendu : équipe -> objectif)")
+    out = []
+    for name, value in raw.items():
+        if isinstance(value, str):
+            value = {"type": value}
+        if not isinstance(value, Mapping):
+            raise RulesError(f"objectif invalide pour {name} : {value!r}")
+        unknown = set(value) - {"type", "rounds"}
+        if unknown:
+            raise RulesError(f"clés d'objectif inconnues pour {name} : {sorted(unknown)}")
+        out.append(
+            (
+                str(name),
+                ObjectiveSpec(
+                    type=str(value.get("type", "eliminate")),
+                    rounds=_optional_int(value.get("rounds"), f"objectives.{name}.rounds"),
+                ),
+            )
+        )
+    return tuple(out)
 
 
 def _obstacles(raw: Any) -> ObstacleSpec | None:
@@ -288,6 +378,7 @@ def parse_rules(raw: Any) -> RulesSpec:
             target_score=_optional_int(raw.get("target_score"), "target_score"),
             max_rounds=_optional_int(raw.get("max_rounds"), "max_rounds"),
             obstacles=_obstacles(raw.get("obstacles")),
+            objectives=_objectives(raw.get("objectives")),
         )
     except (KeyError, TypeError) as exc:
         raise RulesError(f"règles invalides : {exc}") from exc
@@ -308,6 +399,7 @@ class RulesEngine:
         seed: int = 0,
         width: int = 0,
         height: int = 0,
+        team_names: tuple[str, ...] = (),
     ) -> None:
         self.spec = spec
         self.first = first_player
@@ -319,6 +411,12 @@ class RulesEngine:
         self.height = height
         self.stride = width + 2
         self.seed = derive_seed(seed, STREAM_OBSTACLES)
+        self.survive = {
+            team_names.index(name): o.rounds
+            for name, o in spec.objectives
+            if o.type == "survive" and o.rounds is not None
+        }
+        """Équipe de victoire → nombre de tours complets à survivre (P09.4)."""
 
     # ------------------------------------------------------------ tours
     def round_ended(self, n: int, player: int, nxt: int) -> bool:
@@ -432,15 +530,39 @@ class RulesEngine:
         target = self.spec.target_score
         return target is not None and max(state.scores) >= target
 
+    def _survivors(self, state: GameState) -> list[int]:
+        """Équipes ``survive`` vivantes dont la durée est atteinte (P09.4)."""
+        r = state.round
+        alive = state.team_alive
+        return [t for t, n in self.survive.items() if r >= n and alive[t] > 0]
+
     def decided(self, state: GameState) -> bool:
-        """Vrai si une condition propre au mode (score cible, durée) termine la partie."""
+        """Vrai si une condition propre aux règles (survie, score cible, durée) finit la partie."""
+        if self.survive and self._survivors(state):
+            return True
         if not self.zones:
             return False
         limit = self.spec.max_rounds
         return self._target_reached(state) or (limit is not None and state.round >= limit)
 
+    def end_reason(self, state: GameState) -> str:
+        """Cause de fin d'une partie finie (voir ``END_REASONS``)."""
+        if self.survive and self._survivors(state):
+            return "survive"
+        if self.zones:
+            if self._target_reached(state):
+                return "target_score"
+            if state.teams_alive > 1:
+                return "max_rounds"
+        return "elimination"
+
     def winner(self, state: GameState) -> int:
         """Équipe de victoire gagnante d'une partie finie, −1 en cas d'égalité."""
+        survivors = self._survivors(state) if self.survive else []
+        if survivors:  # objectif de survie atteint : la plus petite durée l'emporte
+            best = min(self.survive[t] for t in survivors)
+            first = [t for t in survivors if self.survive[t] == best]
+            return first[0] if len(first) == 1 else -1
         if not self.zones or (not self._target_reached(state) and state.teams_alive == 1):
             if state.teams_alive != 1:
                 return -1
@@ -455,25 +577,30 @@ class RulesEngine:
         return -1
 
 
-def make_engine(
-    spec: RulesSpec,
-    first_player: int,
-    victory_team: tuple[int, ...],
-    seed: int = 0,
-    width: int = 0,
-    height: int = 0,
-) -> RulesEngine | None:
-    """Moteur de règles, ou ``None`` si les règles n'ont pas d'état propre."""
+def make_engine(config: GameConfig, first_player: int) -> RulesEngine | None:
+    """Moteur de règles de la partie, ou ``None`` si les règles n'ont pas d'état propre."""
+    spec = config.rules
     if not spec.needs_engine:
         return None
-    return RulesEngine(spec, first_player, victory_team, seed, width, height)
+    return RulesEngine(
+        spec,
+        first_player,
+        config.victory_team_index,
+        config.seed,
+        config.width,
+        config.height,
+        config.victory_names,
+    )
 
 
 __all__ = [
+    "END_REASONS",
     "MODES",
+    "OBJECTIVES",
     "OBSTACLE",
     "VICTORY_SCOPES",
     "ZONE_RULES",
+    "ObjectiveSpec",
     "ObstacleSpec",
     "RulesEngine",
     "RulesError",

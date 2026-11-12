@@ -27,6 +27,12 @@ from tron.sim.recorder import GameLog, apply_logged
 from tron.viz.render import pv_path
 
 UNAVAILABLE = "non disponible"
+END_LABELS = {
+    "survive": "objectif de survie atteint",
+    "target_score": "score cible atteint",
+    "max_rounds": "nombre maximal de tours atteint",
+}
+"""Libellés des causes de fin autres que l'élimination (P09)."""
 
 SPEEDS = (0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000)
 """Vitesses de lecture disponibles, en demi-coups par seconde."""
@@ -501,15 +507,20 @@ class PlaybackController:
                 status = f"Victoire de {cfg.victory_names[out.winning_team]} (survie individuelle)"
             else:
                 status = f"Victoire de l'équipe {cfg.team_names[out.winning_team]}"
+            reason = END_LABELS.get(st.end_reason())
+            if reason:
+                status = f"{status} ({reason})"
         elif self.paused:
             status = "Pause"
         else:
             status = f"Lecture ×{self.speed:g}"
-        if cfg.rules.zones:  # contrôle de zone : tour et scores des équipes de victoire
+        if cfg.rules.needs_engine:  # règles à état propre (P09) : tour, scores de zone
+            status = f"{status} · tour {st.round}"
+        if cfg.rules.zones:
             scores = " – ".join(
                 f"{name} {score}" for name, score in zip(cfg.victory_names, st.scores, strict=True)
             )
-            status = f"{status} · tour {st.round} · {scores}"
+            status = f"{status} · {scores}"
         return PanelInfo(
             title=self.source.title,
             ply=st.ply,

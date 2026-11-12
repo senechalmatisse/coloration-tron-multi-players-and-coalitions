@@ -288,6 +288,7 @@ class Match:
             rounds=st.round,
             scores=tuple(st.scores) if cfg.rules.zones else (),
             obstacles=st.n_obstacles,
+            end_reason=st.end_reason(),
         )
         for obs in self.observers:
             obs.on_end(self, self.result)

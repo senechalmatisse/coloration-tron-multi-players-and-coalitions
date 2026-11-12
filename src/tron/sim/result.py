@@ -158,6 +158,8 @@ class MatchResult:
     """Score de chaque équipe de victoire (contrôle de zone) ; vide sinon."""
     obstacles: int = 0
     """Obstacles dynamiques posés pendant la partie (P09.3)."""
+    end_reason: str = "elimination"
+    """Cause de fin : ``elimination``, ``survive``, ``target_score`` ou ``max_rounds`` (P09)."""
 
     @property
     def n_players(self) -> int:
@@ -214,6 +216,7 @@ class MatchResult:
         row["rounds"] = self.rounds
         row["team_scores"] = ";".join(str(s) for s in self.scores)
         row["obstacles"] = self.obstacles
+        row["end_reason"] = self.end_reason
         return row
 
 

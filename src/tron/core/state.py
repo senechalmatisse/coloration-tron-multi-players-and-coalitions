@@ -150,9 +150,7 @@ class GameState:
         self.round = 0
         self.scores = [0] * self.n_teams
         self.n_obstacles = 0
-        self._rules: RulesEngine | None = make_engine(
-            config.rules, cur, tuple(team), config.seed, w, h
-        )
+        self._rules: RulesEngine | None = make_engine(config, cur)
         self._rhist: list[RulesToken] = []
         if self._rules is not None:
             self.key ^= self._rules.key_part(self)
@@ -312,6 +310,13 @@ class GameState:
             if self._a[p]:
                 return self._team[p]
         return -1  # pragma: no cover - impossible en tour par tour
+
+    def end_reason(self) -> str:
+        """Cause de fin de partie (``elimination``, ``survive``, ``target_score``,
+        ``max_rounds``), chaîne vide si la partie continue (P09)."""
+        if not self.over:
+            return ""
+        return "elimination" if self._rules is None else self._rules.end_reason(self)
 
     def outcome(self) -> Outcome | None:
         """Vainqueur, rangs de survie et nombre de coups ; ``None`` si la partie continue.

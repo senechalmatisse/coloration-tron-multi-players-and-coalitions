@@ -615,3 +615,161 @@ def test_obstacle_rendering() -> None:
     img = color_grid(st, pal)
     cells = [st.coords(c) for c in range(st.size) if st.grid[c] == -3]
     assert cells and all(tuple(img[y, x]) == pal.muted for x, y in cells)
+
+
+# --------------------------------------------------- objectifs asymetriques
+def _hunt_cfg(objectives: object, teams: list[str] | None = None) -> GameConfig:
+    return _cfg(
+        n=3,
+        teams=teams or ["H", "P", "H"],
+        rules={"mode": "classic", "objectives": objectives},
+    )
+
+
+@pytest.mark.parametrize(
+    ("rules", "teams"),
+    [
+        ({"mode": "classic", "objectives": {"X": "survive"}}, None),  # equipe inconnue
+        ({"mode": "classic", "objectives": {"P": {"type": "fuir"}}}, None),
+        ({"mode": "classic", "objectives": {"P": {"type": "survive"}}}, None),  # sans duree
+        ({"mode": "classic", "objectives": {"P": {"type": "survive", "rounds": 0}}}, None),
+        ({"mode": "classic", "objectives": {"P": {"type": "survive", "rounds": 2.5}}}, None),
+        ({"mode": "classic", "objectives": {"H": {"type": "eliminate", "rounds": 3}}}, None),
+        ({"mode": "classic", "objectives": {"P": {"type": "survive", "n": 3}}}, None),
+        ({"mode": "classic", "objectives": ["P"]}, None),
+        ({"mode": "classic", "objectives": {"P": 3}}, None),
+        (
+            {
+                "mode": "survival",
+                "victory_scope": "individual",
+                "objectives": {"P": {"type": "survive", "rounds": 3}},
+            },
+            None,
+        ),
+        (
+            {
+                "mode": "zone_control",
+                "zones": [[0, 0, 2, 2]],
+                "target_score": 3,
+                "objectives": {"P": {"type": "survive", "rounds": 3}},
+            },
+            None,
+        ),
+    ],
+)
+def test_objective_rules_validation(rules: object, teams: list[str] | None) -> None:
+    with pytest.raises(ConfigError):
+        _cfg(n=3, teams=teams or ["H", "P", "H"], rules=rules)
+
+
+def test_objectives_roundtrip_and_classic_engine() -> None:
+    cfg = _hunt_cfg({"H": "eliminate", "P": {"type": "survive", "rounds": 2}})
+    assert GameConfig.from_dict(cfg.to_dict()) == cfg
+    assert cfg.to_dict()["rules"]["objectives"] == {
+        "H": {"type": "eliminate"},
+        "P": {"type": "survive", "rounds": 2},
+    }
+    only_eliminate = _hunt_cfg({"H": "eliminate"})
+    st = GameState(only_eliminate)
+    assert st._rules is None  # aucun etat propre : cout nul, partie classique
+    plain = GameState(_cfg(n=3, teams=["H", "P", "H"]))
+    assert st.key == plain.key
+
+
+def test_survive_objective_wins_and_undo() -> None:
+    cfg = _hunt_cfg({"P": {"type": "survive", "rounds": 2}})
+    st = GameState(cfg)
+    keys = [st.key]
+    for _ in range(6):  # deux tours complets, chacun joue son premier coup legal
+        assert not st.is_terminal() and st.end_reason() == ""
+        st.apply(st.legal_moves()[0])
+        keys.append(st.key)
+        assert st.key == st.compute_key()
+    out = st.outcome()
+    assert st.is_terminal() and st.end_reason() == "survive"
+    assert out is not None and out.winning_team == 1 and out.winners == (1,)
+    val = Valuation(cfg, VoronoiHeuristic(9, 9, 3)).vector(st, 0)
+    assert val[1] > 1.0 and val[0] == val[2] == 0.0  # chasseurs vivants mais battus
+    st.undo()
+    assert not st.is_terminal() and st.key == keys[-2]
+    # La proie eliminee avant la fin du delai : victoire classique des chasseurs.
+    hunt = GameState(cfg)
+    hunt.apply(hunt.legal_moves()[0])
+    hunt.apply(PASS)
+    out = hunt.outcome()
+    assert out is not None and out.winning_team == 0 and hunt.end_reason() == "elimination"
+
+
+def test_several_survive_objectives() -> None:
+    teams = ["A", "B", "C"]
+    first = GameState(
+        _hunt_cfg(
+            {"A": {"type": "survive", "rounds": 2}, "B": {"type": "survive", "rounds": 3}}, teams
+        )
+    )
+    tie = GameState(
+        _hunt_cfg(
+            {"A": {"type": "survive", "rounds": 2}, "B": {"type": "survive", "rounds": 2}}, teams
+        )
+    )
+    for st in (first, tie):
+        while not st.is_terminal():
+            st.apply(st.legal_moves()[0])
+        assert st.round == 2 and st.end_reason() == "survive"
+    assert first.outcome().winning_team == 0  # type: ignore[union-attr]  # plus petite duree
+    out = tie.outcome()
+    assert out is not None and out.winning_team == -1 and out.winners == ()
+
+
+def test_objectives_in_matches_and_panel(tmp_path: Path) -> None:
+    from tron.sim import GameLog, Recorder
+    from tron.viz import LiveSource, PlaybackController
+
+    cfg = GameConfig.from_yaml(CONFIGS / "games" / "hunters_prey_12x12.yaml")
+    light = GameConfig.from_dict(
+        {
+            **cfg.to_dict(),
+            "rules": {"mode": "classic", "objectives": {"prey": {"type": "survive", "rounds": 6}}},
+            "players": [
+                {"name": "h1", "team": "hunters", "agent": "greedy"},
+                {"name": "p1", "team": "prey", "agent": "greedy"},
+                {"name": "h2", "team": "hunters", "agent": "greedy"},
+            ],
+        }
+    )
+    path = tmp_path / "h.jsonl"
+    result = Match(light, observers=[Recorder(path)]).run()
+    assert result.end_reason == "survive" and result.winning_team == "prey"
+    assert result.rounds == 6 and result.to_row()["end_reason"] == "survive"
+    assert GameLog.load(path).final_state().end_reason() == "survive"
+    ctl = PlaybackController(LiveSource(light), paused=True)
+    assert ctl.panel().status == "Pause · tour 0"
+    while not ctl.source.finished:
+        ctl.step_forward()
+    assert ctl.panel().status.startswith("Victoire de l'équipe prey (objectif de survie atteint)")
+    classic = Match(
+        GameConfig.from_yaml(CONFIGS / "games" / "survival_individual_12x12.yaml")
+    ).run()
+    assert classic.end_reason == "elimination"
+
+
+def test_objectives_with_obstacles_keep_keys_consistent() -> None:
+    cfg = _cfg(
+        n=3,
+        teams=["H", "P", "H"],
+        rules={
+            "mode": "survival",
+            "objectives": {"P": {"type": "survive", "rounds": 9}},
+            "obstacles": {"every": 1, "count": 2},
+        },
+    )
+    for seed in range(5):
+        st = GameState(cfg.with_seed(seed))
+        keys = [st.key]
+        _walk(st, random.Random(seed))
+        assert st.is_terminal() and st.end_reason() in ("survive", "elimination")
+        assert st.key == st.compute_key()
+        while st.ply:
+            st.undo()
+            assert st.key == st.compute_key()
+        assert st.key == keys[0] and st.n_obstacles == 0 and st.round == 0

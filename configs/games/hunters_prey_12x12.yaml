@@ -1,0 +1,21 @@
+# Equipes asymetriques (P09.4) : chaque equipe recoit son objectif.
+# - hunters (2 joueurs) : eliminate (defaut) -> gagner en restant seuls en vie ;
+# - prey (1 joueur) : survive -> gagner des la fin du 32e tour complet s'il vit
+#   encore ; les chasseurs doivent donc l'eliminer avant.
+# Les objectifs sont des parametres de la configuration : aucun agent n'en
+# contient la logique (les feuilles terminales de la recherche en tiennent compte).
+#   tron play configs/games/hunters_prey_12x12.yaml --no-gui --games 12 --out results/hunt
+name: hunters_prey
+grid: 12
+seed: 17
+placement: {mode: regular, rotate: true}
+heuristic: {name: voronoi, tie: order}
+rules:
+  mode: classic
+  objectives:
+    hunters: {type: eliminate}
+    prey: {type: survive, rounds: 32}
+players:
+  - {name: h1, team: hunters, agent: paranoid, depth: 3}
+  - {name: p1, team: prey, agent: paranoid, depth: 3}
+  - {name: h2, team: hunters, agent: paranoid, depth: 3}

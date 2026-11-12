@@ -31,7 +31,7 @@ En survie individuelle, `Valuation` n'accorde la valeur de victoire qu'au surviv
 
 Exemple : `tron play configs/games/survival_individual_12x12.yaml --no-gui`.
 
-Colonnes CSV ajoutées pour tous les modes : `rules_mode`, `individual_winner`, `survival_order`, puis `rounds` (tours complets, comptés seulement si les règles ont un état propre : zones ou obstacles), `team_scores` (contrôle de zone) et `obstacles` (§ 3).
+Colonnes CSV ajoutées pour tous les modes : `rules_mode`, `individual_winner`, `survival_order`, puis `rounds` (tours complets, comptés seulement si les règles ont un état propre : zones, obstacles ou objectif `survive`), `team_scores` (contrôle de zone), `obstacles` (§ 3) et `end_reason` (§ 4).
 
 ## 2. Contrôle de zone (`zone_control`)
 
@@ -102,3 +102,34 @@ rules:
 
 Exemple : `tron play configs/games/obstacles_14x14.yaml --no-gui --games 8 --out results/obstacles`.
 
+
+## 4. Équipes asymétriques (clé `objectives`)
+
+```yaml
+rules:
+  mode: classic                # ou survival (portée team)
+  objectives:
+    hunters: {type: eliminate} # défaut pour toute équipe absente de la liste
+    prey: {type: survive, rounds: 32}
+```
+
+Chaque équipe reçoit un objectif, décrit par la configuration et non par les agents :
+
+| Objectif | Victoire |
+|---|---|
+| `eliminate` (défaut) | rester la dernière équipe en vie (règle classique) |
+| `survive` (`rounds: N`) | avoir encore un joueur vivant à la fin du N-ième tour complet |
+
+Une équipe `survive` impose ainsi une contrainte de temps aux autres équipes : elles doivent l'éliminer avant N tours. Si plusieurs équipes `survive` atteignent leur objectif à la même fin de tour, la plus petite durée l'emporte ; à durée égale, la partie est nulle. Une équipe `survive` peut aussi gagner par élimination de tous ses adversaires.
+
+**Validation.** Erreur explicite pour une équipe inconnue, un objectif inconnu, `survive` sans `rounds` entier ≥ 1, `eliminate` avec `rounds`, une clé inconnue, ou des objectifs hors des modes `classic` et `survival` de portée `team` (contrôle de zone et survie individuelle : non pris en charge en V1).
+
+**Moteur.** Seul l'objectif `survive` ajoute un état (le compteur de tours, déjà inclus dans `apply`/`undo`, Zobrist, copies et sauvegardes) ; avec des objectifs `eliminate` seuls, la partie est strictement classique (aucun moteur de règles, mêmes clés). Les objectifs sont combinables avec les obstacles. Une feuille terminale « survie atteinte » donne la valeur de victoire à l'équipe qui survit et 0 aux adversaires encore vivants : les moteurs de recherche en tiennent compte sans aucune règle propre au mode.
+
+**Sorties.** Colonne CSV `end_reason` pour tous les modes : `elimination`, `survive`, `target_score` ou `max_rounds`. La ligne d'état du panneau affiche le tour et la cause de fin (« Victoire de l'équipe prey (objectif de survie atteint) »).
+
+Exemple : `tron play configs/games/hunters_prey_12x12.yaml --no-gui --games 12 --out results/hunt`. Sur 12 parties (graine 17, Paranoid profondeur 3 pour tous) : 6 victoires des chasseurs par élimination, 6 de la proie (5 par survie, 1 par élimination des chasseurs).
+
+## 5. Tests
+
+`tests/test_game_modes.py` couvre, pour chaque mode : validation YAML, victoire et égalité, `apply`/`undo` (clés et grilles restaurées à chaque demi-coup), copies, instantanés, journaux et reprises de sauvegarde, et la compatibilité des parties classiques (clés de Zobrist identiques à celles du code d'origine).
