@@ -1,0 +1,23 @@
+# P06 : heuristique Voronoi contre composite pour le solitaire, memes agents,
+# memes graines (appariees) et memes profondeurs ; la coalition garde Voronoi.
+# Analyse : McNemar apparie composite contre voronoi (f_solo_heuristic), cout
+# par decision (temps, noeuds) et regression logistique.
+name: heuristic_comparison
+description: Voronoi contre composite pour le solitaire (Paranoid), graines appariees.
+scenario: solo_vs_coalition
+games: 40
+seed: 2030
+seats: cyclic
+base:
+  solo_agent: paranoid
+  coalition_mode: team
+  alpha: 1.0
+  coalition_depth: 2
+  placement: {mode: regular, rotate: true}
+  heuristic: {name: voronoi, tie: order}
+factors:
+  solo_heuristic: [voronoi, composite]
+  solo_depth: [2, 4]
+  k: [1, 2]
+  grid: [12]
+pilot: {games: 4}

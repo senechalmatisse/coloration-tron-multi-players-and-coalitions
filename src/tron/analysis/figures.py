@@ -46,6 +46,19 @@ LABELS = {
     "f_mode": "Mode",
     "f_coalition_mode": "Mode de la coalition",
     "f_solo_agent": "Algorithme du solitaire",
+    "f_simulations": "Simulations MCTS par décision",
+    "f_heuristic_name": "Heuristique",
+    "f_solo_heuristic": "Heuristique du solitaire",
+    "f_ablate": "Composante retirée (ablation)",
+    "f_diplomacy_enabled": "Diplomatie active",
+    "f_alliance_weight": "Poids d'alliance",
+    "f_proposal_ttl_plies": "Durée de vie d'une proposition (demi-coups)",
+    "f_adaptation_rate": "Taux d'adaptation λ",
+    "f_w_territory": "Poids du territoire",
+    "f_w_mobility": "Poids de la mobilité",
+    "f_w_connectivity": "Poids des sorties",
+    "f_w_safety": "Poids de la marge",
+    "f_w_bottleneck": "Poids des passages",
 }
 
 
@@ -140,10 +153,12 @@ def winrate_vs_depth(
     series: str = "f_k",
     facet: str = "f_grid",
     title: str = "Taux de victoire du solitaire",
+    logx: bool = False,
 ) -> Path:
     """Taux de victoire selon la profondeur : une courbe par niveau de ``series``.
 
-    Un panneau par niveau de ``facet``.
+    Un panneau par niveau de ``facet``. ``logx`` : abscisse logarithmique (base 2),
+    utile pour un nombre de simulations.
     """
     plt = _plt()
     facets = sorted(summary[facet].unique(), key=_sort_key) if facet in summary else [None]
@@ -190,7 +205,11 @@ def winrate_vs_depth(
         ax.set_ylim(0, 1.02)
         ax.yaxis.set_major_formatter(lambda v, _pos: f"{100 * v:.0f} %")
         ax.set_xlabel(label(x))
-        ax.set_xticks(sorted(summary[x].unique()))
+        if logx:
+            ax.set_xscale("log", base=2)
+        ticks = sorted(summary[x].unique())
+        ax.set_xticks(ticks, [str(t) for t in ticks])
+        ax.minorticks_off()
         if fv is not None:
             ax.set_title(
                 f"Grille {level_text(facet, fv)}" if facet == "f_grid" else level_text(facet, fv),
@@ -382,6 +401,64 @@ def metric_vs_factor(
         title or f"{METRIC_LABELS.get(metric, metric)} selon {label(x).lower()}",
         handles,
         labels_,
+        width_in=fig.get_size_inches()[0],
+    )
+    return _save(fig, out)
+
+
+def level_comparison(
+    pooled: pd.DataFrame,
+    out: str | Path,
+    factor: str,
+    reference: Any = None,
+    title: str | None = None,
+) -> Path:
+    """Taux de victoire (IC de Wilson) par niveau d'un facteur, niveau de référence en évidence.
+
+    ``pooled`` : une ligne par niveau (``summarize(df, by=[factor])``). La ligne
+    pointillée marque le taux du niveau de référence.
+    """
+    plt = _plt()
+    levels = sorted(pooled[factor].unique(), key=_sort_key)
+    refs = [lv for lv in levels if reference is not None and str(lv) == str(reference)]
+    levels = refs + [lv for lv in levels if lv not in refs]  # référence en premier
+    fig, ax = plt.subplots(figsize=(max(4.2, 0.95 * len(levels) + 1.6), 3.7))
+    ref_rate = None
+    for i, lv in enumerate(levels):
+        row = pooled[pooled[factor] == lv].iloc[0]
+        is_ref = reference is not None and str(lv) == str(reference)
+        color = CATEGORICAL_LIGHT[1] if is_ref else CATEGORICAL_LIGHT[0]
+        if is_ref:
+            ref_rate = float(row["win_rate"])
+        ax.errorbar(
+            [i],
+            [row["win_rate"]],
+            yerr=[
+                [max(0.0, row["win_rate"] - row["ci_low"])],
+                [max(0.0, row["ci_high"] - row["win_rate"])],
+            ],
+            color=color,
+            elinewidth=PX * 1.5,
+            capsize=0,
+            marker="o",
+            markersize=9 * PX * 1.4,
+            markeredgecolor=SURFACE_LIGHT,
+            markeredgewidth=2 * PX,
+            zorder=3,
+        )
+    if ref_rate is not None:
+        ax.axhline(ref_rate, color=CATEGORICAL_LIGHT[1], linewidth=PX * 1.2, linestyle=(0, (3, 3)))
+    ax.set_xticks(range(len(levels)), [str(v) for v in levels])
+    ax.set_xlim(-0.6, len(levels) - 0.4)
+    ax.set_ylim(0, 1.02)
+    ax.yaxis.set_major_formatter(lambda v, _pos: f"{100 * v:.0f} %")
+    ax.set_xlabel(label(factor))
+    ax.set_ylabel("Taux de victoire (IC de Wilson 95 %)")
+    _style(ax)
+    note = " (pointillés : niveau de référence)" if ref_rate is not None else ""
+    _header(
+        fig,
+        (title or f"Taux de victoire : {label(factor)}") + note,
         width_in=fig.get_size_inches()[0],
     )
     return _save(fig, out)

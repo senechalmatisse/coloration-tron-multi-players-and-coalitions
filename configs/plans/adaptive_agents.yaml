@@ -1,0 +1,27 @@
+# P06 : agent fixe (social, profil team) contre agent adaptatif (meme agent de
+# repli) face a chaque profil d'adversaire : greedy (territorial), random
+# (random_like), paranoid et maxn. Le taux d'adaptation ne concerne que
+# l'agent adaptatif : une seule valeur est gardee pour l'agent fixe.
+name: adaptive_agents
+description: Agent fixe contre agent adaptatif face a differents profils d'adversaires.
+scenario: solo_vs_coalition
+games: 24
+seed: 2033
+seats: cyclic
+base:
+  solo_depth: 3
+  coalition_depth: 2
+  fallback_agent: social
+  fallback_profile: team
+  observation_window: 20
+  placement: {mode: regular, rotate: true}
+  heuristic: {name: voronoi, tie: order}
+factors:
+  solo_agent: [social, adaptive]
+  adaptation_rate: [0.25, 0.5]
+  coalition_mode: [greedy, random, paranoid, maxn]
+  k: [1, 2]
+  grid: [12]
+exclude:
+  - {solo_agent: social, adaptation_rate: 0.5}
+pilot: {games: 4, design: {type: subset, n: 12, seed: 1}}

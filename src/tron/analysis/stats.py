@@ -123,38 +123,88 @@ def mcnemar_exact(b: int, c: int) -> float:
     return min(1.0, 2 * tail)
 
 
-def paired_comparisons(
-    df: pd.DataFrame, factor: str, pair_keys: Sequence[str] = ("seed", "first_player")
-) -> pd.DataFrame:
-    """Compare deux à deux les niveaux consécutifs de ``factor`` sur les mêmes parties.
+def wilcoxon_p(differences: Sequence[float]) -> float:
+    """p-valeur bilatérale du test des rangs signés de Wilcoxon (1 si toutes nulles)."""
+    diffs = [d for d in differences if not math.isnan(d) and d != 0.0]
+    if len(diffs) < 2:
+        return 1.0
+    from scipy.stats import wilcoxon  # noqa: PLC0415 - import ponctuel
 
-    Les parties sont appariées par les autres facteurs, la graine et le premier
-    joueur. Renvoie b (gain avec le niveau haut seulement), c (avec le niveau bas
-    seulement), la p-valeur exacte de McNemar et sa correction de Holm.
+    try:
+        return float(wilcoxon(diffs).pvalue)
+    except ValueError:  # pragma: no cover - cas dégénéré
+        return 1.0
+
+
+def _effort(joined: pd.DataFrame, col: str) -> tuple[float, float]:
+    lo, hi = joined.get(f"{col}_low"), joined.get(f"{col}_high")
+    if lo is None or hi is None:
+        return math.nan, math.nan
+    d = (pd.to_numeric(hi, errors="coerce") - pd.to_numeric(lo, errors="coerce")).dropna()
+    if d.empty:
+        return math.nan, math.nan
+    return float(d.mean()), wilcoxon_p(d.tolist())
+
+
+def paired_comparisons(
+    df: pd.DataFrame,
+    factor: str,
+    pair_keys: Sequence[str] = ("seed", "first_player"),
+    reference: Any = None,
+) -> pd.DataFrame:
+    """Compare les niveaux de ``factor`` sur les mêmes parties (McNemar, Holm).
+
+    Sans ``reference`` : niveaux consécutifs (comportement historique). Avec
+    ``reference`` : chaque niveau contre ce niveau de référence (``low``). Les
+    parties sont appariées par les autres facteurs, la graine et le premier
+    joueur. Colonnes : b (victoire avec ``high`` seulement), c (avec ``low``
+    seulement), p-valeur exacte de McNemar et correction de Holm (famille : ce
+    facteur). Si les coûts sont présents, écarts moyens appariés (``high`` − ``low``)
+    du temps et des nœuds par décision du joueur suivi, avec la p-valeur du test
+    de Wilcoxon.
     """
     others = [c for c in factor_columns(df) if c != factor]
-    levels = sorted(df[factor].dropna().unique())
+    levels = sorted(df[factor].dropna().unique(), key=_level_key)
+    if reference is None:
+        pairs = list(itertools.pairwise(levels))
+    else:
+        ref = next((lv for lv in levels if str(lv) == str(reference)), None)
+        if ref is None:
+            return pd.DataFrame()
+        pairs = [(ref, lv) for lv in levels if lv is not ref and str(lv) != str(ref)]
     rows = []
     keys = [*others, *pair_keys]
-    for lo, hi in itertools.pairwise(levels):
-        a = df[df[factor] == lo].set_index(keys)["focus_win"]
-        b = df[df[factor] == hi].set_index(keys)["focus_win"]
-        joined = pd.concat([a.rename("low"), b.rename("high")], axis=1, join="inner")
-        n_b = int(((joined["high"] == 1) & (joined["low"] == 0)).sum())
-        n_c = int(((joined["high"] == 0) & (joined["low"] == 1)).sum())
-        rows.append(
-            {
-                "factor": factor,
-                "low": lo,
-                "high": hi,
-                "pairs": len(joined),
-                "high_only": n_b,
-                "low_only": n_c,
-                "diff": (n_b - n_c) / len(joined) if len(joined) else math.nan,
-                "p_value": mcnemar_exact(n_b, n_c),
-            }
-        )
+    effort = [c for c in ("focus_time_per_decision", "focus_nodes_per_decision") if c in df]
+    cols = ["focus_win", *effort]
+    for lo, hi in pairs:
+        a = df[df[factor] == lo].set_index(keys)[cols]
+        b = df[df[factor] == hi].set_index(keys)[cols]
+        joined = a.join(b, how="inner", lsuffix="_low", rsuffix="_high")
+        n_b = int(((joined["focus_win_high"] == 1) & (joined["focus_win_low"] == 0)).sum())
+        n_c = int(((joined["focus_win_high"] == 0) & (joined["focus_win_low"] == 1)).sum())
+        row: dict[str, Any] = {
+            "factor": factor,
+            "low": lo,
+            "high": hi,
+            "pairs": len(joined),
+            "high_only": n_b,
+            "low_only": n_c,
+            "diff": (n_b - n_c) / len(joined) if len(joined) else math.nan,
+            "p_value": mcnemar_exact(n_b, n_c),
+        }
+        if effort:
+            row["time_diff"], row["time_p_value"] = _effort(joined, "focus_time_per_decision")
+            row["nodes_diff"], row["nodes_p_value"] = _effort(joined, "focus_nodes_per_decision")
+        rows.append(row)
     out = pd.DataFrame(rows)
     if not out.empty:
         out["p_holm"] = holm(out["p_value"].tolist())
     return out
+
+
+def _level_key(value: Any) -> tuple[int, float, str]:
+    if isinstance(value, bool | np.bool_):
+        return (0, float(value), "")
+    if isinstance(value, int | float | np.integer | np.floating) and not math.isnan(value):
+        return (0, float(value), "")
+    return (1, 0.0, str(value))

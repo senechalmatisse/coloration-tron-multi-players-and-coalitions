@@ -18,7 +18,11 @@ Facteurs communs aux scénarios ``solo_vs_coalition`` et ``teams`` :
   ``w_connectivity``, ``w_safety``, ``w_bottleneck`` (heuristique ``composite``) ;
 * diplomatie : ``diplomacy_enabled``, ``proposal_ttl_plies``,
   ``max_allies_per_player``, ``alliance_weight``, ``betrayal_penalty``,
-  ``break_cooldown_plies``.
+  ``break_cooldown_plies`` ;
+* heuristique propre au solitaire : ``solo_heuristic`` (nom ou dictionnaire) ;
+* ablation : ``ablate`` (``none`` ou une composante de l'heuristique composite,
+  mise à zéro) : sur l'heuristique du solitaire si ``solo_heuristic`` est
+  donnée, sinon sur l'heuristique de la partie (qui doit être ``composite``).
 
 Alias : ``agent_solo`` pour ``solo_agent``, ``agent_coalition`` pour ``coalition_mode``.
 """
@@ -106,7 +110,27 @@ def _apply_common(cfg: dict[str, Any], params: Mapping[str, Any]) -> dict[str, A
         base = dict(cfg.get("diplomacy") or {})
         base.update(diplomacy)
         cfg["diplomacy"] = base
+    ablate = str(params.get("ablate", "none"))
+    if ablate != "none":
+        if ablate not in HEURISTIC_WEIGHTS.values():
+            raise ConfigError(f"composante d'ablation inconnue : {ablate}")
+        solo = next((p for p in cfg["players"] if p.get("name") == "solo"), None)
+        if solo is not None and "heuristic" in solo:
+            target = solo["heuristic"]
+        elif heuristic.get("name") == "composite":
+            target = heuristic
+        else:
+            raise ConfigError("l'ablation exige l'heuristique composite (solo_heuristic ou partie)")
+        target[ablate] = 0.0
     return cfg
+
+
+def _heuristic_param(value: Any) -> dict[str, Any]:
+    if isinstance(value, str):
+        return {"name": value}
+    if isinstance(value, Mapping):
+        return copy.deepcopy(dict(value))
+    raise ConfigError(f"heuristique invalide : {value!r}")
 
 
 def _depth_field(params: Mapping[str, Any], value: int) -> dict[str, int]:
@@ -174,6 +198,8 @@ def solo_vs_coalition(params: Mapping[str, Any]) -> dict[str, Any]:
     solo = {"name": "solo", "team": "solo", "agent": params.get("solo_agent", "paranoid")}
     solo.update(_depth_field(params, int(params.get("solo_depth", 2))))
     _agent_params(params, solo)
+    if "solo_heuristic" in params:
+        solo["heuristic"] = _heuristic_param(params["solo_heuristic"])
     solo.update(params.get("solo_params", {}))
     mode = str(params.get("coalition_mode", "team"))
     members = []

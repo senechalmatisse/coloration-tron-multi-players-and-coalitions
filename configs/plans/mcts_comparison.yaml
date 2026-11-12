@@ -24,3 +24,4 @@ factors:
   coalition_mode: [maxn, paranoid, team, greedy]
   k: [1, 2]
   grid: [12]
+pilot: {games: 4, design: {type: subset, n: 10, seed: 1}}

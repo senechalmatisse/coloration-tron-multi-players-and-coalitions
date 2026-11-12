@@ -1,0 +1,25 @@
+# P06 : ablation de l'heuristique composite du solitaire, une composante mise a
+# zero a la fois (les autres poids restent ceux par defaut, renormalises).
+# La contribution marginale d'une composante est l'ecart apparie de taux de
+# victoire entre l'heuristique complete (ablate: none) et l'heuristique privee
+# de cette composante (colonne diff de paired.csv, McNemar et Holm).
+name: ablation
+description: Ablation des composantes de l'heuristique composite (solitaire Paranoid).
+scenario: solo_vs_coalition
+games: 40
+seed: 2031
+seats: cyclic
+base:
+  solo_agent: paranoid
+  solo_depth: 3
+  solo_heuristic: composite
+  coalition_mode: team
+  alpha: 1.0
+  coalition_depth: 2
+  placement: {mode: regular, rotate: true}
+  heuristic: {name: voronoi, tie: order}
+factors:
+  ablate: [none, territory, mobility, connectivity, safety, bottleneck]
+  k: [1, 2]
+  grid: [12]
+pilot: {games: 4}

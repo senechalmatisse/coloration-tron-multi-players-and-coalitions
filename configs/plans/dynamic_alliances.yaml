@@ -1,0 +1,30 @@
+# P06 : diplomatie tactique inactive contre active, duree de vie des
+# propositions, poids d'alliance et taille de coalition. Tous les joueurs ont le
+# profil dynamic_team (politique contre le meneur) ; l'equipe suivie est T0.
+# Sans diplomatie, la duree de vie et le poids sont sans effet : seules les
+# valeurs par defaut (8, 0.65) sont gardees pour eviter des conditions en double.
+# Les alliances ne changent ni les equipes permanentes ni la victoire.
+name: dynamic_alliances
+description: Effet de la diplomatie sur la victoire, la survie, la cooperation et les alliances.
+scenario: teams
+games: 24
+seed: 2032
+seats: cyclic
+base:
+  mode: dynamic_team
+  depth: 2
+  alpha: 1.0
+  placement: {mode: regular, rotate: true}
+  heuristic: {name: voronoi, tie: order}
+factors:
+  diplomacy_enabled: [false, true]
+  proposal_ttl_plies: [4, 8, 16]
+  alliance_weight: [0.35, 0.65, 1.0]
+  composition: ["1v1v1v1", "2v1v1"]
+  grid: [12]
+exclude:
+  - {diplomacy_enabled: false, proposal_ttl_plies: 4}
+  - {diplomacy_enabled: false, proposal_ttl_plies: 16}
+  - {diplomacy_enabled: false, alliance_weight: 0.35}
+  - {diplomacy_enabled: false, alliance_weight: 1.0}
+pilot: {games: 4, design: {type: subset, n: 14, seed: 1}}

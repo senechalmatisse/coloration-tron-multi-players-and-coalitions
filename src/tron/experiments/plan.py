@@ -17,6 +17,7 @@ Exemple ::
     exclude: [{k: 5, grid: 10}]
     key_conditions: {games: 200, where: [{k: 3, grid: 20}]}
     metrics: true              # métriques de coopération (colonnes vides si false)
+    pilot: {games: 4, design: {type: subset, n: 8, seed: 1}}   # variante pilote (tron run --pilot)
 
 Graines appariées : la graine de la partie g dépend seulement de la graine du
 plan et de g (et non de la condition) ; toutes les conditions de même nombre de
@@ -30,7 +31,7 @@ from __future__ import annotations
 import itertools
 import json
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -54,6 +55,8 @@ _PLAN_KEYS = frozenset(
         "key_conditions",
         "logs",
         "metrics",
+        "details",
+        "pilot",
         "description",
     }
 )
@@ -119,6 +122,8 @@ class Plan:
     key_conditions: dict[str, Any] = field(default_factory=dict)
     logs: bool = False
     metrics: bool = True
+    details: bool = True
+    pilot: dict[str, Any] = field(default_factory=dict)
     description: str = ""
 
     def __post_init__(self) -> None:
@@ -126,6 +131,9 @@ class Plan:
             raise ConfigError("games doit être >= 1")
         if self.seats not in ("cyclic", "per_game"):
             raise ConfigError("seats doit valoir 'cyclic' ou 'per_game'")
+        unknown = set(self.pilot) - {"games", "design"}
+        if unknown:
+            raise ConfigError(f"clés de pilote inconnues : {sorted(unknown)} (games, design)")
         for name, levels in self.factors.items():
             if not isinstance(levels, Sequence) or isinstance(levels, str) or not levels:
                 raise ConfigError(f"le facteur {name} doit avoir une liste de niveaux")
@@ -153,6 +161,8 @@ class Plan:
                 key_conditions=dict(data.get("key_conditions") or {}),
                 logs=bool(data.get("logs", False)),
                 metrics=bool(data.get("metrics", True)),
+                details=bool(data.get("details", True)),
+                pilot=dict(data.get("pilot") or {}),
                 description=str(data.get("description", "")),
             )
         except KeyError as exc:
@@ -176,8 +186,38 @@ class Plan:
             "key_conditions": self.key_conditions,
             "logs": self.logs,
             "metrics": self.metrics,
+            "details": self.details,
+            "pilot": self.pilot,
             "description": self.description,
         }
+
+    def pilot_plan(self, games: int | None = None) -> Plan:
+        """Variante pilote : peu de parties (et éventuellement un sous-ensemble de conditions).
+
+        Utilise le bloc ``pilot`` du plan (``games``, ``design``) ; à défaut, 4 parties
+        par condition. ``games`` (option ``--games``) a priorité. Les graines restent
+        celles du plan complet : les parties du pilote en sont un préfixe.
+        """
+        n = int(games if games is not None else self.pilot.get("games", min(4, self.games)))
+        if n < 1:
+            raise ConfigError("le pilote doit jouer au moins une partie par condition")
+        return replace(
+            self,
+            name=f"{self.name}_pilot",
+            games=n,
+            design=self.pilot.get("design", self.design),
+            key_conditions={},
+            pilot={},
+        )
+
+    def with_games(self, games: int) -> Plan:
+        """Même plan avec ``games`` parties par condition (conditions clés comprises)."""
+        if games < 1:
+            raise ConfigError("games doit être >= 1")
+        kc = dict(self.key_conditions)
+        if kc:
+            kc["games"] = games
+        return replace(self, games=games, key_conditions=kc)
 
     # ------------------------------------------------------------- conditions
     def _combinations(self) -> list[dict[str, Any]]:

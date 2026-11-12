@@ -22,11 +22,20 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import tron
+from tron.core.config import GameConfig
 from tron.experiments.plan import Plan, Task
 from tron.experiments.store import ResultStore
 from tron.sim.match import Match, MatchObserver, ensure_warmup
-from tron.sim.recorder import Recorder
+from tron.sim.recorder import LOG_FORMAT, Recorder
 from tron.sim.result import METRICS_VERSION, environment_info
+
+DIPLOMACY_V1_NOTE = (
+    "diplomatie V1 : la matrice W_t est constante pendant une recherche (les actions "
+    "diplomatiques futures ne sont pas simulées) ; une action diplomatique ne coûte pas "
+    "de demi-coup ; les équipes permanentes et la victoire ne changent pas"
+)
+TIME_LIMIT_NOTE = "time_limit utilisé : résultats dépendants de la machine"
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,13 +51,13 @@ def _cell(value: Any) -> Any:
     return json.dumps(value) if isinstance(value, list | dict | tuple) else value
 
 
-def run_task(task: Task, log_dir: str | None = None) -> dict[str, Any]:
+def run_task(task: Task, log_dir: str | None = None, details: bool = True) -> dict[str, Any]:
     """Joue une partie et renvoie sa ligne de résultats (fonction de processus)."""
     ensure_warmup()
     observers: list[MatchObserver] = []
     if log_dir is not None:
         name = f"c{task.cond_index:04d}_g{task.game:04d}.jsonl"
-        observers.append(Recorder(Path(log_dir) / name))
+        observers.append(Recorder(Path(log_dir) / name, details=details))
     result = Match(task.game_config(), observers=observers, metrics=task.metrics).run()
     row: dict[str, Any] = {
         "plan": task.plan,
@@ -116,7 +125,15 @@ def run_plan(
     log_dir = str(out / "logs") if (plan.logs if logs is None else logs) else None
     manifest = {
         "plan": plan.to_dict(),
+        "factors": {name: list(levels) for name, levels in plan.factors.items()},
+        "conditions": len({t.condition for t in tasks}),
         "environment": environment_info(),
+        "versions": {
+            "code": tron.__version__,
+            "log_format": LOG_FORMAT,
+            "metrics": METRICS_VERSION if plan.metrics else None,
+        },
+        "limitations": plan_limitations(tasks),
         "metrics_version": METRICS_VERSION if plan.metrics else None,
         "started": datetime.now(UTC).isoformat(timespec="seconds"),
         "tasks_total": len(tasks),
@@ -130,7 +147,7 @@ def run_plan(
     start = time.perf_counter()
     report = _progress(len(pending)) if progress and pending else (lambda k: None)
     try:
-        for row in _execute(pending, workers, log_dir):
+        for row in _execute(pending, workers, log_dir, plan.details):
             store.append(row)
             report(1)
     finally:
@@ -144,13 +161,29 @@ def run_plan(
     )
 
 
+def plan_limitations(tasks: list[Task]) -> list[str]:
+    """Limites méthodologiques à inscrire dans le manifeste, selon les configurations jouées."""
+    notes: list[str] = []
+    seen: set[str] = set()
+    for task in tasks:
+        if task.condition in seen:
+            continue
+        seen.add(task.condition)
+        cfg = GameConfig.from_dict({**task.config, "seed": 0, "first_player": 0})
+        if cfg.diplomacy.enabled and DIPLOMACY_V1_NOTE not in notes:
+            notes.append(DIPLOMACY_V1_NOTE)
+        if any("time_limit" in p.params for p in cfg.players) and TIME_LIMIT_NOTE not in notes:
+            notes.append(TIME_LIMIT_NOTE)
+    return notes
+
+
 def _execute(
-    tasks: list[Task], workers: int | None, log_dir: str | None
+    tasks: list[Task], workers: int | None, log_dir: str | None, details: bool = True
 ) -> Iterable[dict[str, Any]]:
     n_workers = workers if workers is not None else (os.cpu_count() or 1)
     if n_workers <= 1 or len(tasks) <= 1:
         for task in tasks:
-            yield run_task(task, log_dir)
+            yield run_task(task, log_dir, details)
         return
     ensure_warmup()  # remplit le cache de compilation avant de lancer les processus
     with ProcessPoolExecutor(max_workers=n_workers, initializer=ensure_warmup) as pool:
@@ -158,14 +191,14 @@ def _execute(
         running: set[Future[dict[str, Any]]] = set()
         try:
             for task in itertools.islice(queue, 4 * n_workers):
-                running.add(pool.submit(run_task, task, log_dir))
+                running.add(pool.submit(run_task, task, log_dir, details))
             while running:
                 finished, running = wait(running, return_when=FIRST_COMPLETED)
                 for fut in finished:
                     yield fut.result()
                     nxt = next(queue, None)
                     if nxt is not None:
-                        running.add(pool.submit(run_task, nxt, log_dir))
+                        running.add(pool.submit(run_task, nxt, log_dir, details))
         except BaseException:
             for fut in running:
                 fut.cancel()

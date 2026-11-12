@@ -15,11 +15,41 @@ from tron.analysis.cooperation import (
     has_diplomacy,
     has_metrics,
 )
-from tron.analysis.regression import default_formula, fit_logit
+from tron.analysis.regression import default_formula, fit_logit, new_terms, prepare
 from tron.analysis.stats import factor_columns, load_results, paired_comparisons, summarize
 
-COOPERATION_AXES = ("f_k", "f_coalition_depth", "f_grid", "f_composition")
+COOPERATION_AXES = (
+    "f_k",
+    "f_coalition_depth",
+    "f_diplomacy_enabled",
+    "f_alliance_weight",
+    "f_proposal_ttl_plies",
+    "f_grid",
+    "f_composition",
+)
 """Facteurs candidats (dans cet ordre) pour la figure de l'indice de coopération."""
+
+REFERENCE_LEVELS: dict[str, object] = {
+    "f_heuristic_name": "voronoi",
+    "f_solo_heuristic": "voronoi",
+    "f_solo_agent": "paranoid",
+    "f_ablate": "none",
+    "f_diplomacy_enabled": False,
+}
+"""Facteurs comparés à un niveau de référence (McNemar apparié, Holm par facteur)."""
+
+DOSE_FACTORS = (
+    "f_simulations",
+    "f_adaptation_rate",
+    "f_alliance_weight",
+    "f_proposal_ttl_plies",
+    "f_w_territory",
+    "f_w_mobility",
+    "f_w_connectivity",
+    "f_w_safety",
+    "f_w_bottleneck",
+)
+"""Facteurs numériques comparés de niveau en niveau, avec une courbe de taux de victoire."""
 
 
 @dataclass
@@ -47,13 +77,21 @@ def analyze(
     result = AnalysisOutput(summary=summary_path)
     factors = factor_columns(df)
 
-    # Comparaisons appariées des profondeurs consécutives (H1).
+    # Comparaisons appariées : profondeurs consécutives (H1), puis facteurs P06.
+    tables = []
     depth_factor = next((f for f in ("f_solo_depth", "f_depth_t0") if f in factors), None)
     if depth_factor is not None:
-        paired = paired_comparisons(df, depth_factor)
-        if not paired.empty:
-            result.paired = out / "paired.csv"
-            paired.to_csv(result.paired, index=False)
+        tables.append(paired_comparisons(df, depth_factor))
+    for factor, ref in REFERENCE_LEVELS.items():
+        if factor in factors and df[factor].nunique() > 1:
+            tables.append(paired_comparisons(df, factor, reference=ref))
+    for factor in DOSE_FACTORS:
+        if factor in factors and df[factor].nunique() > 1:
+            tables.append(paired_comparisons(df, factor))
+    tables = [t for t in tables if not t.empty]
+    if tables:
+        result.paired = out / "paired.csv"
+        pd.concat(tables, ignore_index=True).to_csv(result.paired, index=False)
 
     # Figures de l'étude A : une série de figures par niveau des autres facteurs.
     if {"f_solo_depth", "f_k"} <= set(factors):
@@ -61,8 +99,11 @@ def analyze(
     elif {"f_depth_t0", "f_composition"} <= set(factors):
         result.figures += _study_b_figures(summary, factors, out)
 
-    # Régression logistique (F7.3).
-    if formula is not None or "f_solo_depth" in factors:
+    # Figures des campagnes P06 : niveaux d'un facteur catégoriel, courbes de dose.
+    result.figures += _campaign_figures(df, summary, factors, out)
+
+    # Régression logistique (F7.3), étendue aux facteurs P06 qui varient.
+    if formula is not None or "f_solo_depth" in factors or new_terms(prepare(df)):
         try:
             reg = fit_logit(df, formula or default_formula(df))
         except (ValueError, KeyError, ArithmeticError) as exc:
@@ -81,6 +122,48 @@ def analyze(
             result.diplomacy = out / "diplomacy.csv"
             dipl.to_csv(result.diplomacy, index=False)
     return result
+
+
+def _campaign_figures(
+    df: pd.DataFrame, summary: pd.DataFrame, factors: list[str], out: Path
+) -> list[Path]:
+    paths = []
+    for factor, ref in REFERENCE_LEVELS.items():
+        if factor in factors and df[factor].nunique() > 1:
+            pooled = summarize(df, by=[factor])
+            paths.append(
+                figures.level_comparison(
+                    pooled, out / f"winrate_{factor[2:]}.png", factor, reference=ref
+                )
+            )
+    for factor in DOSE_FACTORS:
+        if factor in factors and df[factor].nunique() > 1:
+            found: str | None = next(
+                (
+                    f
+                    for f in ("f_grid", "f_k", "f_solo_agent", "f_coalition_mode")
+                    if f in factors and f != factor and summary[f].nunique() > 1
+                ),
+                None,
+            )
+            data = summary if found is not None else summary.assign(_serie="toutes")
+            series = found if found is not None else "_serie"
+            aggs = {
+                c: (c, "mean") for c in ("win_rate", "ci_low", "ci_high", "chance") if c in data
+            }
+            pooled = data.groupby([factor, series], as_index=False).agg(**aggs)
+            paths.append(
+                figures.winrate_vs_depth(
+                    pooled,
+                    out / f"winrate_{factor[2:]}.png",
+                    x=factor,
+                    series=series,
+                    facet="_aucune",
+                    title=f"Taux de victoire : {figures.label(factor)}",
+                    logx=factor == "f_simulations",
+                )
+            )
+    return paths
 
 
 def _cooperation_outputs(

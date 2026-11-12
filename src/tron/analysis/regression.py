@@ -7,11 +7,22 @@ ajustement IRLS en NumPy fournit les mêmes coefficients et une variance robuste
 ``a*b`` (= a + b + a:b).
 
 Les facteurs sont désignés sans leur préfixe ``f_`` (``solo_depth``, ``k``…).
+
+Facteurs des campagnes P06, ajoutés à la formule par défaut seulement s'ils
+varient (la formule des études historiques est inchangée) :
+
+* ``log2(simulations)`` ; ``exploration``, ``alliance_weight``,
+  ``proposal_ttl_plies``, ``adaptation_rate`` et les poids ``w_*`` tels quels ;
+* ``diplomacy_enabled`` codé 0/1 ;
+* facteurs catégoriels (``heuristic_name``, ``solo_heuristic``, ``solo_agent``,
+  ``ablate``) : une indicatrice ``<facteur>__<niveau>`` par niveau autre que la
+  référence (:data:`CATEGORICAL_REFERENCES`), compatible avec le repli NumPy.
 """
 
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass
 
 import numpy as np
@@ -22,6 +33,55 @@ log2 = np.log2  # accessible aux formules statsmodels (patsy évalue dans ce mod
 DEFAULT_FORMULA = (
     "focus_win ~ log2(solo_depth) * k + log2(solo_depth) * grid + log2(coalition_depth)"
 )
+
+
+LOG_FACTORS = ("simulations",)
+NUMERIC_FACTORS = (
+    "exploration",
+    "alliance_weight",
+    "proposal_ttl_plies",
+    "adaptation_rate",
+    "w_territory",
+    "w_mobility",
+    "w_connectivity",
+    "w_safety",
+    "w_bottleneck",
+)
+BINARY_FACTORS = ("diplomacy_enabled",)
+CATEGORICAL_REFERENCES = {
+    "heuristic_name": "voronoi",
+    "solo_heuristic": "voronoi",
+    "solo_agent": "paranoid",
+    "ablate": "none",
+}
+"""Facteurs catégoriels et leur niveau de référence (sinon le premier niveau trié)."""
+
+
+def _sanitize(text: str) -> str:
+    return re.sub(r"[^0-9A-Za-z_]", "_", text)
+
+
+def _indicators(data: pd.DataFrame, factor: str) -> list[str]:
+    levels = sorted(str(v) for v in data[factor].dropna().unique())
+    if len(levels) < 2:
+        return []
+    ref = CATEGORICAL_REFERENCES.get(factor)
+    ref = ref if ref in levels else levels[0]
+    return [f"{factor}__{_sanitize(lv)}" for lv in levels if lv != ref]
+
+
+def new_terms(data: pd.DataFrame) -> list[str]:
+    """Termes des facteurs P06 qui varient dans ``data`` (déjà préparé)."""
+
+    def varies(col: str) -> bool:
+        return col in data.columns and data[col].nunique() > 1
+
+    terms = [f"log2({c})" for c in LOG_FACTORS if varies(c)]
+    terms += [c for c in (*NUMERIC_FACTORS, *BINARY_FACTORS) if varies(c)]
+    for factor in CATEGORICAL_REFERENCES:
+        if varies(factor):
+            terms += _indicators(data, factor)
+    return terms
 
 
 def default_formula(df: pd.DataFrame) -> str:
@@ -41,6 +101,7 @@ def default_formula(df: pd.DataFrame) -> str:
                 terms.append(f"log2(solo_depth):{col}")
     if varies("coalition_depth"):
         terms.append("log2(coalition_depth)")
+    terms += new_terms(data)
     if not terms:
         raise ValueError("aucun facteur ne varie : pas de régression possible")
     return "focus_win ~ " + " + ".join(terms)
@@ -66,10 +127,23 @@ class RegressionResult:
 
 
 def prepare(df: pd.DataFrame) -> pd.DataFrame:
-    """Copie avec les facteurs sans préfixe ``f_`` (grille réduite à son côté)."""
+    """Copie avec les facteurs sans préfixe ``f_`` (grille réduite à son côté).
+
+    Les facteurs binaires sont codés 0/1 et les facteurs catégoriels reçoivent
+    leurs indicatrices (voir le module).
+    """
     data = df.rename(columns={c: c[2:] for c in df.columns if c.startswith("f_")}).copy()
     if "grid" in data.columns:
         data["grid"] = data["grid"].map(_grid_side)
+    for col in BINARY_FACTORS:
+        if col in data.columns:
+            data[col] = data[col].map(lambda v: int(str(v).strip().lower() in ("true", "1")))
+    for factor in CATEGORICAL_REFERENCES:
+        if factor in data.columns:
+            text = data[factor].astype(str)
+            for name in _indicators(data, factor):
+                level = next(lv for lv in sorted(set(text)) if f"{factor}__{_sanitize(lv)}" == name)
+                data[name] = (text == level).astype(float)
     return data
 
 
@@ -184,9 +258,10 @@ def _fit_numpy(data: pd.DataFrame, formula: str, cluster: str) -> RegressionResu
     k = x.shape[1]
     correction = (n_groups / (n_groups - 1)) * ((n - 1) / (n - k)) if n_groups > 1 else 1.0
     cov = correction * bread @ meat @ bread
-    se = np.sqrt(np.diag(cov))
-    z = beta / se
-    pvals = [math.erfc(abs(v) / math.sqrt(2)) for v in z]
+    with np.errstate(divide="ignore", invalid="ignore"):  # cas dégénérés (séparation)
+        se = np.sqrt(np.clip(np.diag(cov), 0.0, None))
+        z = beta / se
+    pvals = [math.erfc(abs(v) / math.sqrt(2)) if math.isfinite(v) else math.nan for v in z]
     table = pd.DataFrame(
         {
             "term": ["Intercept", *terms],

@@ -180,6 +180,10 @@ def cmd_run(args: argparse.Namespace) -> int:
     from tron.experiments.runner import estimate, run_plan  # noqa: PLC0415
 
     plan = Plan.from_yaml(args.plan)
+    if args.pilot:
+        plan = plan.pilot_plan(args.games)
+    elif args.games is not None:
+        plan = plan.with_games(args.games)
     conditions = plan.conditions()
     n_tasks = sum(c.games for c in conditions)
     print(f"plan {plan.name} : {len(conditions)} conditions, {n_tasks} parties")
@@ -287,6 +291,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--logs", action="store_true", help="journaux JSONL de chaque partie")
     p.add_argument("--estimate", type=int, metavar="N", help="estime le budget sur N parties")
     p.add_argument("--dry-run", action="store_true", help="affiche la taille du plan")
+    p.add_argument(
+        "--pilot", action="store_true", help="variante pilote du plan (bloc pilot, sinon 4 parties)"
+    )
+    p.add_argument("--games", type=int, help="parties par condition (remplace celles du plan)")
     p.set_defaults(func=cmd_run)
 
     p = sub.add_parser("analyze", help="tableaux, tests, figures et régression")
