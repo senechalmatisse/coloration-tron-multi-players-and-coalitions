@@ -1,4 +1,4 @@
-"""Agents : interface commune, agents de référence, Negamax, Paranoid, MaxN, SOS."""
+"""Agents : interface commune, agents de référence, Negamax, Paranoid, MaxN, SOS, MCTS."""
 
 from tron.agents.base import (
     AGENTS,
@@ -15,6 +15,7 @@ from tron.agents.context import (
     DiplomacyIntent,
     DiplomacySnapshot,
 )
+from tron.agents.mcts import ROLLOUT_POLICIES, MCTSAgent
 from tron.agents.search import SearchMemory, SearchOptions, SearchResult, search
 from tron.agents.searchers import MaxNAgent, NegamaxAgent, ParanoidAgent, SearchAgent, SocialAgent
 from tron.agents.simple import GreedyAgent, RandomAgent
@@ -32,6 +33,7 @@ from tron.agents.social import (
 __all__ = [
     "AGENTS",
     "PROFILES",
+    "ROLLOUT_POLICIES",
     "Agent",
     "AllianceEvent",
     "Decision",
@@ -40,6 +42,7 @@ __all__ = [
     "DiplomacySnapshot",
     "GreedyAgent",
     "LinearBound",
+    "MCTSAgent",
     "MaxNAgent",
     "NegamaxAgent",
     "ParanoidAgent",

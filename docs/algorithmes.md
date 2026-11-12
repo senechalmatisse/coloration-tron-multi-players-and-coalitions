@@ -124,7 +124,36 @@ Le profil Paranoid correspond exactement à la propriété 2 de l'article (c_ii 
   - une table par agent, donc par matrice W ;
   - seul le meilleur coup est mémorisé, pour le tri, ce qui préserve l'exactitude. Les transpositions vraies sont rares en Tron : chaque trajet laisse un mur différent.
 
-## 8. Méthodologie expérimentale (§7)
+## 8. MCTS multijoueur à utilité vectorielle (P04)
+
+L'agent `mcts` explore un grand nombre de continuations au lieu d'une recherche exhaustive à profondeur fixe.
+
+- **Nœud** : coup entrant, joueur au trait, nombre de visites N, somme des vecteurs de récompense (une composante par joueur).
+- **Sélection** : au nœud où p a le trait, l'enfant c maximise U_p(c) + C·√(ln N(nœud)/N(c)), avec U_p(c) = W[p]·(somme(c)/N(c)). Par défaut W = I (profil `maxn`) ; tout profil social est accepté (`profile`, `alpha`, `matrix`). Comme pour MaxN, le vecteur brut est remonté et l'utilité calculée à la sélection.
+- **Expansion** : un coup non essayé, dans un ordre tiré avec la graine. Un joueur sans coup légal joue `PASS` et est éliminé, exactement comme dans les moteurs exacts.
+- **Simulation** : `random` (coup sûr au hasard) ou `greedy` (coup qui maximise le nombre de cases libres voisines de la case d'arrivée, départage au hasard ; c'est une politique de mobilité, beaucoup moins coûteuse que l'agent glouton à Voronoi). Arrêt en fin de partie ou après `rollout_depth` demi-coups.
+- **Évaluation** : `Valuation.vector(état, demi-coup racine)`, donc le même codage que les moteurs exacts (victoire > part de territoire > défaite, toutes composantes ≥ 0).
+- **Choix** : l'enfant de la racine le plus visité ; à égalité, la règle de départage de l'agent.
+- **Restauration** : la recherche travaille sur une copie de l'état ; chaque simulation défait ses coups dans un bloc `try/finally`.
+- **Reproductibilité** : tout l'aléa vient du flux de l'agent (`make_rng(graine, STREAM_AGENT, joueur)`), une graine Python dérivée par décision. `time_limit` est facultatif et rend les parties dépendantes de la machine : à proscrire dans les campagnes.
+
+Ce n'est pas un UCT à deux joueurs : chaque nœud est évalué avec l'utilité du joueur qui y a le trait. Aucun élagage alpha-bêta ou de Korf n'est appliqué (aucune borne n'est prouvée pour ce parcours stochastique).
+
+Statistiques : `nodes` = nœuds créés (racine comprise), `leaves` = simulations, `depth` = profondeur maximale de l'arbre, `ties` = coups racine à égalité de visites, `value` = utilité moyenne du coup choisi, `pv` = suite des enfants les plus visités. Les résultats CSV exposent `leaves_p<i>` (simulations ou feuilles cumulées) et `meandepth_p<i>`.
+
+**Première comparaison** (Python pur, indicative : effectifs faibles). Duels sur 10 × 10, 12 parties : MCTS à 200 simulations gagne 12/12 contre l'agent aléatoire et 6/12 (simulations `greedy`) ou 8/12 (`random`) contre le glouton à Voronoi. Plan `mcts_comparison.yaml` réduit à 4 parties par condition (160 parties, grille 12 × 12, solitaire contre 1 ou 2 adversaires) :
+
+| Solitaire | Taux de victoire moyen | Temps par décision | Nœuds par décision | Simulations ou feuilles par décision | Profondeur moyenne |
+|---|---:|---:|---:|---:|---:|
+| `mcts` (300 simulations) | 25 % | 14 ms | 203 | 220 | 7,3 |
+| `maxn` (profondeur 3) | 56 % | 1 ms | 18 | 11 | 2,3 |
+| `paranoid` (profondeur 3) | 44 % | 1 ms | 20 | 12 | 2,3 |
+| `social` (profondeur 3) | 44 % | 1 ms | 20 | 12 | 2,3 |
+| `greedy` | 31 % | < 1 ms | 3 | 2 | 1,0 |
+
+Avec 300 simulations et une politique de simulation simple, MCTS reste ici en retrait des recherches exactes de profondeur 3, pour un coût dix fois supérieur. `social` (profil Équipe, α = 1) donne exactement les décisions de `paranoid` pour un joueur seul, comme prévu par la réduction à deux équipes (§4). Les plans `mcts_comparison.yaml` (20 parties par condition) et `mcts_simulations.yaml` (courbe selon le nombre de simulations) mesurent ces écarts avec des graines appariées ; ces chiffres sont à confirmer à pleine taille.
+
+## 9. Méthodologie expérimentale (§7)
 
 - **Graines appariées.** La graine de la partie g dépend de la graine du plan et de g, pas de la condition. Avec `seats: cyclic`, la graine d'indice g div n est jouée n fois, une
   fois avec chaque premier joueur. Les sièges tournent ainsi complètement, ce qui neutralise l'avantage du premier coup sur les cases disputées.

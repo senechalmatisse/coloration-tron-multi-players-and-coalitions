@@ -76,6 +76,8 @@ class PlayerTotals:
     think_time: float = 0.0
     max_depth: int = 0
     mean_depth: float = 0.0
+    leaves: int = 0
+    """Feuilles évaluées (recherches exactes) ou simulations (MCTS)."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -189,6 +191,10 @@ class MatchResult:
             row[f"time_p{i}"] = round(tot.think_time, 6) if tot else ""
             row[f"maxdepth_p{i}"] = tot.max_depth if tot else ""
         row.update(environment_info())
+        for i in range(max_players):
+            tot = self.totals[i] if i < self.n_players else None
+            row[f"leaves_p{i}"] = tot.leaves if tot else ""
+            row[f"meandepth_p{i}"] = round(tot.mean_depth, 4) if tot else ""
         row.update(metrics_row(self.metrics, max_players))
         return row
 

@@ -56,6 +56,10 @@ def enrich(df: pd.DataFrame) -> pd.DataFrame:
         dec = df["decisions_p0"].replace(0, np.nan)
         df["focus_nodes_per_decision"] = df["nodes_p0"] / dec
         df["focus_time_per_decision"] = df["time_p0"] / dec
+        if "leaves_p0" in df.columns:  # colonnes ajoutées par P04 : absentes des anciens CSV
+            df["focus_leaves_per_decision"] = pd.to_numeric(df["leaves_p0"], errors="coerce") / dec
+        if "meandepth_p0" in df.columns:
+            df["focus_mean_depth"] = pd.to_numeric(df["meandepth_p0"], errors="coerce")
     if "f_solo_depth" in df.columns and "n_players" in df.columns:
         df["solo_depth_rounds"] = df["f_solo_depth"] / df["n_players"]
     return df
@@ -88,6 +92,10 @@ def summarize(df: pd.DataFrame, by: Sequence[str] | None = None) -> pd.DataFrame
         if "focus_nodes_per_decision" in g:
             row["nodes_per_decision"] = float(g["focus_nodes_per_decision"].mean())
             row["time_per_decision"] = float(g["focus_time_per_decision"].mean())
+        if "focus_leaves_per_decision" in g:
+            row["leaves_per_decision"] = float(g["focus_leaves_per_decision"].mean())
+        if "focus_mean_depth" in g:
+            row["mean_depth"] = float(g["focus_mean_depth"].mean())
         rows.append(row)
     out = pd.DataFrame(rows)
     return out.drop(columns=["_all"], errors="ignore")

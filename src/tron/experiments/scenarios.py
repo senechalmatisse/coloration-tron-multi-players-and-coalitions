@@ -7,6 +7,20 @@
 
 Chaque scénario renvoie un dictionnaire de configuration (sans graine ni premier
 joueur, fixés par partie).
+
+Facteurs communs aux scénarios ``solo_vs_coalition`` et ``teams`` :
+
+* paramètres d'agent, transmis aux seuls joueurs de l'agent concerné
+  (:data:`AGENT_PARAMS`) : ``simulations``, ``exploration``, ``rollout_policy``,
+  ``rollout_depth`` (``mcts``) ; ``adaptation_rate``, ``observation_window``,
+  ``fallback_agent``, ``fallback_profile`` (``adaptive``) ;
+* heuristique : ``heuristic_name`` et les poids ``w_territory``, ``w_mobility``,
+  ``w_connectivity``, ``w_safety``, ``w_bottleneck`` (heuristique ``composite``) ;
+* diplomatie : ``diplomacy_enabled``, ``proposal_ttl_plies``,
+  ``max_allies_per_player``, ``alliance_weight``, ``betrayal_penalty``,
+  ``break_cooldown_plies``.
+
+Alias : ``agent_solo`` pour ``solo_agent``, ``agent_coalition`` pour ``coalition_mode``.
 """
 
 from __future__ import annotations
@@ -20,7 +34,28 @@ from tron.core.config import ConfigError
 ScenarioFn = Callable[[Mapping[str, Any]], dict[str, Any]]
 SCENARIOS: dict[str, ScenarioFn] = {}
 
-_COMMON = {"heuristic", "placement", "grid", "name", "tie_break", "depth_unit"}
+AGENT_PARAMS: dict[str, tuple[str, ...]] = {
+    "mcts": ("simulations", "exploration", "rollout_policy", "rollout_depth"),
+    "adaptive": ("adaptation_rate", "observation_window", "fallback_agent", "fallback_profile"),
+}
+"""Facteurs propres à un agent : appliqués aux seuls joueurs de cet agent."""
+
+HEURISTIC_WEIGHTS = {
+    "w_territory": "territory",
+    "w_mobility": "mobility",
+    "w_connectivity": "connectivity",
+    "w_safety": "safety",
+    "w_bottleneck": "bottleneck",
+}
+DIPLOMACY_FACTORS = {
+    "diplomacy_enabled": "enabled",
+    "proposal_ttl_plies": "proposal_ttl_plies",
+    "max_allies_per_player": "max_allies_per_player",
+    "alliance_weight": "alliance_weight",
+    "betrayal_penalty": "betrayal_penalty",
+    "break_cooldown_plies": "break_cooldown_plies",
+}
+_ALIASES = {"agent_solo": "solo_agent", "agent_coalition": "coalition_mode"}
 
 
 def register_scenario(name: str) -> Callable[[ScenarioFn], ScenarioFn]:
@@ -37,7 +72,41 @@ def build_config(scenario: str, params: Mapping[str, Any]) -> dict[str, Any]:
         fn = SCENARIOS[scenario]
     except KeyError:
         raise ConfigError(f"scénario inconnu : {scenario} (connus : {sorted(SCENARIOS)})") from None
-    return fn(params)
+    return fn(_resolve_aliases(params))
+
+
+def _resolve_aliases(params: Mapping[str, Any]) -> dict[str, Any]:
+    out = dict(params)
+    for alias, name in _ALIASES.items():
+        if alias in out:
+            if name in out and out[name] != out[alias]:
+                raise ConfigError(f"{alias} et {name} sont contradictoires")
+            out[name] = out.pop(alias)
+    return out
+
+
+def _agent_params(params: Mapping[str, Any], player: dict[str, Any]) -> dict[str, Any]:
+    """Ajoute à ``player`` les facteurs propres à son agent (voir :data:`AGENT_PARAMS`)."""
+    for key in AGENT_PARAMS.get(str(player.get("agent")), ()):
+        if key in params:
+            player[key] = copy.deepcopy(params[key])
+    return player
+
+
+def _apply_common(cfg: dict[str, Any], params: Mapping[str, Any]) -> dict[str, Any]:
+    """Facteurs d'heuristique et de diplomatie communs aux scénarios."""
+    heuristic = cfg["heuristic"]
+    if "heuristic_name" in params:
+        heuristic["name"] = str(params["heuristic_name"])
+    for factor, name in HEURISTIC_WEIGHTS.items():
+        if factor in params:
+            heuristic[name] = params[factor]
+    diplomacy = {name: params[f] for f, name in DIPLOMACY_FACTORS.items() if f in params}
+    if diplomacy:
+        base = dict(cfg.get("diplomacy") or {})
+        base.update(diplomacy)
+        cfg["diplomacy"] = base
+    return cfg
 
 
 def _depth_field(params: Mapping[str, Any], value: int) -> dict[str, int]:
@@ -63,6 +132,8 @@ def _base(params: Mapping[str, Any], name: str) -> dict[str, Any]:
     }
     if "tie_break" in params:
         cfg["defaults"] = {"tie_break": params["tie_break"]}
+    if "diplomacy" in params:
+        cfg["diplomacy"] = copy.deepcopy(params["diplomacy"])
     return cfg
 
 
@@ -77,12 +148,14 @@ def _member(params: Mapping[str, Any], mode: str, depth: int) -> dict[str, Any]:
         player = {"agent": "maxn"}
     elif mode == "paranoid":
         player = {"agent": "paranoid"}
-    elif mode in ("greedy", "random"):
+    elif mode == "dynamic_team":
+        player = {"agent": "social", "profile": "dynamic_team", "alpha": alpha}
+    elif mode in ("greedy", "random", "mcts", "adaptive"):
         player = {"agent": mode}
     else:
         raise ConfigError(f"mode de coalition inconnu : {mode}")
     player.update(_depth_field(params, depth))
-    return player
+    return _agent_params(params, player)
 
 
 @register_scenario("solo_vs_coalition")
@@ -90,8 +163,9 @@ def solo_vs_coalition(params: Mapping[str, Any]) -> dict[str, Any]:
     """Étude A : joueur 0 seul (équipe ``solo``) contre k joueurs (équipe ``coalition``).
 
     Facteurs usuels : ``k``, ``solo_depth``, ``coalition_depth``, ``grid``,
-    ``coalition_mode`` (``team`` : profil Équipe α ; ``maxn`` : individualiste),
-    ``solo_agent`` (``paranoid``, ``maxn``…).
+    ``coalition_mode`` (``team`` : profil Équipe α ; ``maxn`` : individualiste ;
+    ``team_paranoid``, ``paranoid``, ``dynamic_team``, ``greedy``, ``random``,
+    ``mcts``, ``adaptive``), ``solo_agent`` (``paranoid``, ``maxn``, ``mcts``…).
     """
     k = int(params.get("k", 1))
     if not 1 <= k <= 7:
@@ -99,6 +173,7 @@ def solo_vs_coalition(params: Mapping[str, Any]) -> dict[str, Any]:
     cfg = _base(params, f"solo_vs_{k}")
     solo = {"name": "solo", "team": "solo", "agent": params.get("solo_agent", "paranoid")}
     solo.update(_depth_field(params, int(params.get("solo_depth", 2))))
+    _agent_params(params, solo)
     solo.update(params.get("solo_params", {}))
     mode = str(params.get("coalition_mode", "team"))
     members = []
@@ -108,7 +183,7 @@ def solo_vs_coalition(params: Mapping[str, Any]) -> dict[str, Any]:
         m.update(params.get("coalition_params", {}))
         members.append(m)
     cfg["players"] = [solo, *members]
-    return cfg
+    return _apply_common(cfg, params)
 
 
 def parse_composition(text: str) -> list[int]:
@@ -147,7 +222,7 @@ def teams(params: Mapping[str, Any]) -> dict[str, Any]:
     for r in range(max(sizes)):
         order.extend(team[r] for team in by_team if r < len(team))
     cfg["players"] = order
-    return cfg
+    return _apply_common(cfg, params)
 
 
 def set_path(data: dict[str, Any], path: str, value: Any) -> None:

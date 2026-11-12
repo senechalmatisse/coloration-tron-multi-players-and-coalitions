@@ -1,0 +1,26 @@
+# P04 / P06 : MCTS face aux agents historiques (MaxN, Paranoid, Social, Greedy).
+# Le solitaire (equipe suivie) change d'algorithme, l'adversaire est fixe dans
+# chaque condition : graines appariees et rotation complete des sieges, donc les
+# taux de victoire du solitaire se comparent algorithme contre algorithme sur les
+# memes parties (McNemar). Mesures : victoire, temps et noeuds par decision,
+# simulations (leaves_p0) et profondeur effective (meandepth_p0, maxdepth_p0).
+name: mcts_comparison
+description: MCTS contre MaxN, Paranoid, Social et Greedy, en duel et a un contre deux.
+scenario: solo_vs_coalition
+games: 20
+seed: 2026
+seats: cyclic
+base:
+  solo_depth: 3
+  coalition_depth: 2
+  simulations: 300
+  exploration: 1.41421356237
+  rollout_policy: greedy
+  rollout_depth: 80
+  placement: {mode: regular, rotate: true}
+  heuristic: {name: voronoi, tie: order}
+factors:
+  solo_agent: [mcts, maxn, paranoid, social, greedy]
+  coalition_mode: [maxn, paranoid, team, greedy]
+  k: [1, 2]
+  grid: [12]

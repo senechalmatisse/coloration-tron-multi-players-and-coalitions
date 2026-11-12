@@ -1,0 +1,21 @@
+# P06 : courbe du taux de victoire de MCTS selon le nombre de simulations,
+# en duel contre Paranoid de profondeur 3 (graines appariees entre niveaux).
+name: mcts_simulations
+description: Taux de victoire de MCTS selon le nombre de simulations.
+scenario: solo_vs_coalition
+games: 40
+seed: 2027
+seats: cyclic
+base:
+  solo_agent: mcts
+  coalition_mode: paranoid
+  coalition_depth: 3
+  k: 1
+  exploration: 1.41421356237
+  rollout_policy: greedy
+  rollout_depth: 80
+  placement: {mode: regular, rotate: true}
+  heuristic: {name: voronoi, tie: order}
+factors:
+  simulations: [50, 100, 250, 500, 1000]
+  grid: [12, 16]

@@ -1,0 +1,18 @@
+# Duel MCTS (P04) contre Paranoid sur une petite grille (demonstration rapide).
+# Parametres MCTS : simulations par decision, constante d'exploration UCT,
+# politique de simulation (random ou greedy) et longueur maximale d'une simulation.
+name: mcts_duel
+grid: 12
+seed: 7
+placement: {mode: regular, rotate: true}
+heuristic: {name: voronoi, tie: order}
+players:
+  - name: mcts_0
+    team: A
+    agent: mcts
+    simulations: 400
+    exploration: 1.41421356237
+    rollout_policy: greedy
+    rollout_depth: 80
+    tie_break: random
+  - {name: paranoid, team: B, agent: paranoid, depth: 4}

@@ -119,6 +119,7 @@ class Match:
         self._time = [0.0] * n
         self._max_depth = [0] * n
         self._sum_depth = [0] * n
+        self._leaves = [0] * n
 
     def add_observer(self, observer: MatchObserver) -> None:
         self.observers.append(observer)
@@ -162,6 +163,7 @@ class Match:
             self._time[p] += stats.time
             self._max_depth[p] = max(self._max_depth[p], stats.depth)
             self._sum_depth[p] += stats.depth
+            self._leaves[p] += stats.leaves
         else:
             move = PASS
         origin = st.head(p)
@@ -208,6 +210,7 @@ class Match:
                 think_time=self._time[i],
                 max_depth=self._max_depth[i],
                 mean_depth=self._sum_depth[i] / self._decisions[i] if self._decisions[i] else 0.0,
+                leaves=self._leaves[i],
             )
             for i in range(cfg.n_players)
         )
