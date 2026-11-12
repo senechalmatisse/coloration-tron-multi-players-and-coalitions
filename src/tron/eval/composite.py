@@ -312,6 +312,11 @@ class CompositeHeuristic(Heuristic):
         if JIT_ENABLED and not _COMPILED[0]:  # pragma: no cover - avec Numba
             warmup()
 
+    def set_weights(self, weights: Mapping[str, Any]) -> None:
+        """Remplace les poids (validés et normalisés, absents = valeurs par défaut)."""
+        self.weights = normalize_weights(weights)
+        self._w = tuple(self.weights[name] for name in COMPONENTS)
+
     def _run(self, state: GameState) -> tuple[list[int], int, int]:
         """Exécute Voronoi puis le noyau ; renvoie (comptes Voronoi, total, composantes)."""
         counts, total = self.voronoi.counts(state)

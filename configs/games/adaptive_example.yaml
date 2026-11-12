@@ -1,0 +1,19 @@
+# Agent adaptatif (P05) : modele d'adversaire (fenetre glissante de 20 coups)
+# et ajustement borne (adaptation_rate) des poids de l'heuristique composite.
+# Tant que le modele est peu confiant, l'agent joue exactement comme son agent
+# de repli (fallback_agent, ici social avec le profil team).
+name: adaptive_example
+grid: 20
+seed: 42
+placement: {mode: regular, rotate: true}
+heuristic: {name: voronoi, tie: order}
+players:
+  - name: adaptive
+    team: A
+    agent: adaptive
+    depth: 3
+    adaptation_rate: 0.25
+    observation_window: 20
+    fallback_agent: social
+    fallback_profile: team
+  - {name: opponent, team: B, agent: greedy, depth: 1}

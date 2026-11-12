@@ -143,6 +143,22 @@ class Agent(ABC):
     def reset(self) -> None:  # noqa: B027 - crochet facultatif, vide par défaut
         """Réinitialise la mémoire de l'agent (nouvelle partie)."""
 
+    def observe_move(  # noqa: B027 - crochet facultatif, vide par défaut
+        self,
+        player: int,
+        direction: int,
+        origin: tuple[int, int],
+        target: tuple[int, int] | None,
+        eliminated: bool,
+        state: GameState,
+    ) -> None:
+        """Crochet d'observation appelé après chaque demi-coup de la partie (P05).
+
+        ``state`` est l'état réel **après** le coup : il ne doit pas être modifié
+        (travailler sur ``state.copy()``). Les agents qui n'en ont pas besoin
+        n'implémentent rien.
+        """
+
     def describe(self) -> str:
         return f"{self.name}(d={self.depth})"
 

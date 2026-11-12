@@ -181,6 +181,9 @@ class Match:
             diplomacy=tuple(dipl),
         )
         self.events.append(event)
+        target = event.target
+        for agent in self.agents:  # crochet d'observation (P05), vide pour les agents historiques
+            agent.observe_move(p, move, origin, target, not moved, st)
         if self.metrics is not None:
             self.metrics.record(st, p, origin, move, event.target, event.eliminated, event.ply)
         for obs in self.observers:

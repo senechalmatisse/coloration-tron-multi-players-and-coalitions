@@ -1,5 +1,6 @@
 """Agents : interface commune, agents de référence, Negamax, Paranoid, MaxN, SOS, MCTS."""
 
+from tron.agents.adaptive import AdaptiveAgent, adapted_weights, base_weights
 from tron.agents.base import (
     AGENTS,
     Agent,
@@ -16,6 +17,7 @@ from tron.agents.context import (
     DiplomacySnapshot,
 )
 from tron.agents.mcts import ROLLOUT_POLICIES, MCTSAgent
+from tron.agents.opponents import BEHAVIOURS, MoveFeatures, OpponentModel
 from tron.agents.search import SearchMemory, SearchOptions, SearchResult, search
 from tron.agents.searchers import MaxNAgent, NegamaxAgent, ParanoidAgent, SearchAgent, SocialAgent
 from tron.agents.simple import GreedyAgent, RandomAgent
@@ -32,8 +34,10 @@ from tron.agents.social import (
 
 __all__ = [
     "AGENTS",
+    "BEHAVIOURS",
     "PROFILES",
     "ROLLOUT_POLICIES",
+    "AdaptiveAgent",
     "Agent",
     "AllianceEvent",
     "Decision",
@@ -44,7 +48,9 @@ __all__ = [
     "LinearBound",
     "MCTSAgent",
     "MaxNAgent",
+    "MoveFeatures",
     "NegamaxAgent",
+    "OpponentModel",
     "ParanoidAgent",
     "RandomAgent",
     "SearchAgent",
@@ -54,6 +60,8 @@ __all__ = [
     "SearchStats",
     "SocialAgent",
     "TwoCamp",
+    "adapted_weights",
+    "base_weights",
     "build_agents",
     "dynamic_matrix",
     "lp_upper",
