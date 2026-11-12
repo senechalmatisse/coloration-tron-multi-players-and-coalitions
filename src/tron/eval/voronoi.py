@@ -263,6 +263,16 @@ class VoronoiHeuristic(Heuristic):
             return [0.0] * len(counts)
         return [c / total for c in counts]
 
+    def last_search(self) -> tuple[Any, Any, Any, int]:
+        """Tableaux du dernier parcours : distances, masques, marques, génération.
+
+        Une case ``c`` a été atteinte par le dernier appel à :meth:`counts` si
+        ``stamp[c] == gen`` ; ``mask[c]`` est alors l'ensemble (bits) des joueurs
+        qui l'atteignent à la distance minimale ``dist[c]``. Ces tableaux sont
+        réutilisés par d'autres heuristiques (composite) sans refaire le parcours.
+        """
+        return self._dist, self._mask, self._stamp, self._gen
+
     def owner_map(self, state: GameState) -> np.ndarray:
         """Propriétaire de chaque case, tableau (H, W) ; −1 pour un mur ou une case neutre."""
         self.counts(state)

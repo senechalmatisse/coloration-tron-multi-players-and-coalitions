@@ -56,7 +56,10 @@ def make_heuristic(
             f"heuristique inconnue : {spec.name} (connues : {sorted(HEURISTICS)})"
         ) from None
     params = {**spec.params, **overrides}
-    return cls(width, height, n_players, **params)
+    try:
+        return cls(width, height, n_players, **params)
+    except TypeError as exc:
+        raise ValueError(f"paramètres invalides pour l'heuristique {spec.name} : {exc}") from exc
 
 
 @register_heuristic("uniform")

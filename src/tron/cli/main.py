@@ -108,6 +108,7 @@ def cmd_bench(args: argparse.Namespace) -> int:
 
     from tron.agents.base import make_agent  # noqa: PLC0415
     from tron.core.state import GameState  # noqa: PLC0415
+    from tron.eval.base import make_heuristic  # noqa: PLC0415
     from tron.eval.voronoi import VoronoiHeuristic  # noqa: PLC0415
     from tron.sim.match import ensure_warmup  # noqa: PLC0415
 
@@ -118,6 +119,7 @@ def cmd_bench(args: argparse.Namespace) -> int:
             "grid": args.grid,
             "seed": args.seed,
             "placement": {"mode": "regular", "rotate": True},
+            "heuristic": {"name": args.heuristic},
             "players": [
                 {"name": f"J{i}", "agent": args.agent, "depth": args.depth}
                 for i in range(args.players)
@@ -126,7 +128,7 @@ def cmd_bench(args: argparse.Namespace) -> int:
     )
     print(
         f"tron {__version__} · noyaux : {backend_name()} · grille {args.grid}x{args.grid} · "
-        f"{args.players} joueurs"
+        f"{args.players} joueurs · heuristique {args.heuristic}"
     )
 
     def midgame(fill: float) -> GameState:
@@ -140,13 +142,16 @@ def cmd_bench(args: argparse.Namespace) -> int:
         return st
 
     st = midgame(args.fill)
-    heur = VoronoiHeuristic(args.grid, args.grid, args.players)
-    heur.counts(st)
+    heur = make_heuristic(config.heuristic, args.grid, args.grid, args.players)
+    # Voronoi : mesure historique sur ``counts`` (comparabilité avec les mesures de référence).
+    evaluate = heur.counts if isinstance(heur, VoronoiHeuristic) else heur.shares
+    evaluate(st)
     t0 = time.perf_counter()
     for _ in range(args.evals):
-        heur.counts(st)
+        evaluate(st)
     dt = time.perf_counter() - t0
-    print(f"Voronoi : {args.evals / dt:,.0f} évaluations/s ({1e6 * dt / args.evals:.1f} µs)")
+    label = "Voronoi" if args.heuristic == "voronoi" else args.heuristic
+    print(f"{label} : {args.evals / dt:,.0f} évaluations/s ({1e6 * dt / args.evals:.1f} µs)")
 
     times, nodes = [], []
     done = 0
@@ -262,6 +267,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--decisions", type=int, default=20)
     p.add_argument("--fill", type=float, default=0.2, help="taux de remplissage pour Voronoi")
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument(
+        "--heuristic", default="voronoi", help="heuristique mesurée (voronoi, composite…)"
+    )
     p.set_defaults(func=cmd_bench)
 
     p = sub.add_parser("run", help="exécute un plan d'expériences")

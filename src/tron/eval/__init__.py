@@ -7,19 +7,31 @@ from tron.eval.base import (
     make_heuristic,
     register_heuristic,
 )
+from tron.eval.composite import (
+    COMPONENTS,
+    DEFAULT_WEIGHTS,
+    CompositeFeatures,
+    CompositeHeuristic,
+    normalize_weights,
+)
 from tron.eval.valuation import PLY_CAP, WIN_BONUS, Valuation
 from tron.eval.voronoi import TIE_MODES, VoronoiHeuristic, voronoi_kernel, warmup
 
 __all__ = [
+    "COMPONENTS",
+    "DEFAULT_WEIGHTS",
     "HEURISTICS",
     "PLY_CAP",
     "TIE_MODES",
     "WIN_BONUS",
+    "CompositeFeatures",
+    "CompositeHeuristic",
     "Heuristic",
     "UniformHeuristic",
     "Valuation",
     "VoronoiHeuristic",
     "make_heuristic",
+    "normalize_weights",
     "register_heuristic",
     "voronoi_kernel",
     "warmup",

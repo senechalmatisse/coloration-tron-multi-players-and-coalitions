@@ -1,0 +1,17 @@
+# Heuristique multicritere (P01) : territoire de Voronoi, mobilite, sorties,
+# marge avant enfermement et controle des passages (points d'articulation).
+# Les poids sont normalises automatiquement a une somme de 1.
+name: composite_example
+grid: 20
+seed: 42
+placement: {mode: regular, rotate: true}
+heuristic:
+  name: composite
+  territory: 0.55
+  mobility: 0.15
+  connectivity: 0.10
+  safety: 0.15
+  bottleneck: 0.05
+players:
+  - {name: p0, team: A, agent: paranoid, depth: 4}
+  - {name: p1, team: B, agent: maxn, depth: 4}
