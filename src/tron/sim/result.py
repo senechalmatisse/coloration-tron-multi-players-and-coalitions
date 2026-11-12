@@ -152,6 +152,10 @@ class MatchResult:
     """Vainqueur individuel : dernier survivant en survie individuelle, ou seul survivant."""
     survival_order: tuple[int, ...] = ()
     """Joueurs du plus long au plus court temps de survie (à égalité, ordre des indices)."""
+    rounds: int = 0
+    """Tours complets joués (modes à règles, P09 ; 0 sinon)."""
+    scores: tuple[int, ...] = ()
+    """Score de chaque équipe de victoire (contrôle de zone) ; vide sinon."""
 
     @property
     def n_players(self) -> int:
@@ -205,6 +209,8 @@ class MatchResult:
         row["rules_mode"] = self.mode
         row["individual_winner"] = "" if self.individual_winner is None else self.individual_winner
         row["survival_order"] = ";".join(str(p) for p in self.survival_order)
+        row["rounds"] = self.rounds
+        row["team_scores"] = ";".join(str(s) for s in self.scores)
         return row
 
 

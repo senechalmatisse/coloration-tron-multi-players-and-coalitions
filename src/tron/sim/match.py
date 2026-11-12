@@ -54,6 +54,8 @@ class MoveEvent:
     diplomacy: tuple[AllianceEvent, ...] = ()
     details: DecisionDetails | None = None
     """Explication de la décision (P07), ``None`` si l'agent n'en fournit pas."""
+    zone: tuple[tuple[int, int], ...] = ()
+    """Changements de contrôle des zones à la fin d'un tour (zone, équipe ou −1), P09."""
 
 
 def accepts_context(agent: Agent) -> bool:
@@ -114,6 +116,8 @@ class Match:
             DiplomacyState(config.diplomacy, config.n_players) if config.diplomacy.enabled else None
         )
         self._with_context = [accepts_context(a) for a in self.agents]
+        rules = self.state._rules
+        self._controllers = rules.controllers(self.state) if rules is not None else []
         self.prior_moves: list[dict[str, Any]] = []
         """Lignes ``move`` jouées avant une reprise depuis une sauvegarde (P08)."""
         self._resumed = False
@@ -174,7 +178,13 @@ class Match:
         else:
             move = PASS
         origin = st.head(p)
+        round_before = st.round
         moved = st.apply(move)
+        zone: list[tuple[int, int]] = []
+        if st._rules is not None and st.round != round_before:
+            now = st._rules.controllers(st)
+            zone = [(z, t) for z, t in enumerate(now) if t != self._controllers[z]]
+            self._controllers = now
         if self.diplomacy is not None:
             dipl += self.diplomacy.advance(st.ply, [st.is_alive(q) for q in range(st.n)])
         event = MoveEvent(
@@ -187,6 +197,7 @@ class Match:
             stats=stats,
             diplomacy=tuple(dipl),
             details=details,
+            zone=tuple(zone),
         )
         self.events.append(event)
         target = event.target
@@ -271,6 +282,8 @@ class Match:
             mode=cfg.rules.mode,
             individual_winner=individual,
             survival_order=order,
+            rounds=st.round,
+            scores=tuple(st.scores) if st._rules is not None else (),
         )
         for obs in self.observers:
             obs.on_end(self, self.result)

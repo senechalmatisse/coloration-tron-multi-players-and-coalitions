@@ -16,6 +16,7 @@ from tron.eval.composite import (
 )
 from tron.eval.valuation import PLY_CAP, WIN_BONUS, Valuation
 from tron.eval.voronoi import TIE_MODES, VoronoiHeuristic, voronoi_kernel, warmup
+from tron.eval.zone import ZONE_COMPONENTS, ZoneHeuristic
 
 __all__ = [
     "COMPONENTS",
@@ -24,12 +25,14 @@ __all__ = [
     "PLY_CAP",
     "TIE_MODES",
     "WIN_BONUS",
+    "ZONE_COMPONENTS",
     "CompositeFeatures",
     "CompositeHeuristic",
     "Heuristic",
     "UniformHeuristic",
     "Valuation",
     "VoronoiHeuristic",
+    "ZoneHeuristic",
     "make_heuristic",
     "normalize_weights",
     "register_heuristic",

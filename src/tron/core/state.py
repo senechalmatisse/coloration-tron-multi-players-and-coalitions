@@ -21,6 +21,7 @@ import numpy as np
 
 from tron.core.config import GameConfig
 from tron.core.placement import initial_positions
+from tron.core.rules import RulesEngine, make_engine
 from tron.core.zobrist import ZobristTables, zobrist_tables
 
 FREE = -1
@@ -50,6 +51,8 @@ class GameState:
         "_h",
         "_hist",
         "_off",
+        "_rhist",
+        "_rules",
         "_team",
         "_z",
         "alive",
@@ -68,6 +71,8 @@ class GameState:
         "over",
         "ply",
         "positions",
+        "round",
+        "scores",
         "size",
         "stride",
         "team",
@@ -139,6 +144,13 @@ class GameState:
         self.n_moves = 0
         self.elim_order: list[int] = []
         self._hist: list[tuple[int, int, int, int]] = []
+        # Règles (P09) : tours complets et scores par équipe de victoire.
+        self.round = 0
+        self.scores = [0] * self.n_teams
+        self._rules: RulesEngine | None = make_engine(config.rules, cur, tuple(team))
+        self._rhist: list[Any] = []
+        if self._rules is not None:
+            self.key ^= self._rules.key_part(self)
 
     def _bind_views(self) -> None:
         self._g = memoryview(self.grid)
@@ -234,12 +246,20 @@ class GameState:
         self.current = nxt
         self.key = key ^ z.turn[p] ^ z.turn[nxt]
         self._hist.append((p, h, t, prev_key))
-        self.over = self.teams_alive <= 1
+        rules = self._rules
+        if rules is None:
+            self.over = self.teams_alive <= 1
+        else:
+            self._rhist.append(rules.after_apply(self, p, nxt))
+            self.over = self.teams_alive <= 1 or rules.decided(self)
         return t >= 0
 
     def undo(self) -> None:
         """Défait le dernier coup (déplacement ou élimination)."""
         p, h, t, prev_key = self._hist.pop()
+        rules = self._rules
+        if rules is not None:
+            rules.undo(self, self._rhist.pop())
         if t >= 0:
             self._g[t] = FREE
             self._h[p] = h
@@ -255,7 +275,7 @@ class GameState:
         self.ply -= 1
         self.current = p
         self.key = prev_key
-        self.over = self.teams_alive <= 1
+        self.over = self.teams_alive <= 1 or (rules is not None and rules.decided(self))
 
     def _next_alive(self, p: int) -> int:
         a = self._a
@@ -278,7 +298,9 @@ class GameState:
         return self.over
 
     def winning_team(self) -> int:
-        """Indice de l'équipe gagnante, ou −1 si la partie n'est pas finie."""
+        """Équipe de victoire gagnante ; −1 si la partie continue ou en cas d'égalité."""
+        if self._rules is not None:
+            return self._rules.winner(self) if self.over else -1
         if self.teams_alive != 1:
             return -1
         for p in range(self.n):
@@ -287,18 +309,24 @@ class GameState:
         return -1  # pragma: no cover - impossible en tour par tour
 
     def outcome(self) -> Outcome | None:
-        """Vainqueur, rangs de survie et nombre de coups ; ``None`` si la partie continue."""
+        """Vainqueur, rangs de survie et nombre de coups ; ``None`` si la partie continue.
+
+        ``winners`` : joueurs vivants de l'équipe gagnante (vide en cas d'égalité).
+        ``ranks`` : rang de survie, 1 pour tous les joueurs encore vivants.
+        """
         if not self.is_terminal():
             return None
-        winners = tuple(p for p in range(self.n) if self._a[p])
-        n_alive = len(winners)
+        winning = self.winning_team()
+        team = self._team
+        winners = tuple(p for p in range(self.n) if self._a[p] and team[p] == winning)
+        n_alive = sum(1 for p in range(self.n) if self._a[p])
         ranks = [1] * self.n
         order = self.elim_order
         m = len(order)
         for i, p in enumerate(order):
             ranks[p] = 1 + n_alive + (m - 1 - i)
         return Outcome(
-            winning_team=self.winning_team(),
+            winning_team=winning,
             winners=winners,
             ranks=tuple(ranks),
             elimination_order=tuple(order),
@@ -324,14 +352,18 @@ class GameState:
             "n_teams",
             "positions",
             "_z",
+            "_rules",
             "current",
             "key",
             "ply",
             "n_moves",
             "teams_alive",
             "over",
+            "round",
         ):
             setattr(new, name, getattr(self, name))
+        new.scores = list(self.scores)
+        new._rhist = list(self._rhist) if history else []
         new.grid = self.grid.copy()
         new.heads = self.heads.copy()
         new.alive = self.alive.copy()
@@ -352,6 +384,8 @@ class GameState:
         for p in range(self.n):
             if self._a[p]:
                 key ^= z.head[p][self._h[p]] ^ z.alive[p]
+        if self._rules is not None:
+            key ^= self._rules.key_part(self)
         return key ^ z.turn[self.current]
 
     def grid2d(self) -> np.ndarray:
@@ -419,6 +453,9 @@ class GameState:
             "teams_alive": self.teams_alive,
             "key": self.key,
             "history": [list(h) for h in self._hist],
+            "round": self.round,
+            "scores": list(self.scores),
+            "rules_history": [None if tok is None else list(tok) for tok in self._rhist],
         }
 
     @classmethod
@@ -478,7 +515,18 @@ class GameState:
             state.teams_alive = sum(1 for c in counts if c > 0)
             if state.teams_alive != int(data["teams_alive"]):
                 raise ValueError("nombre d'équipes vivantes incohérent")
-            state.over = state.teams_alive <= 1
+            state.round = int(data.get("round", 0))
+            state.scores = [int(x) for x in data.get("scores", [0] * state.n_teams)]
+            if len(state.scores) != state.n_teams or min(state.scores, default=0) < 0:
+                raise ValueError("scores incohérents")
+            state._rhist = [
+                None if tok is None else tuple(int(x) for x in tok)
+                for tok in data.get("rules_history", [])
+            ]
+            if state._rules is not None and len(state._rhist) != len(data.get("history", [])):
+                raise ValueError("historique des règles incohérent")
+            rules = state._rules
+            state.over = state.teams_alive <= 1 or (rules is not None and rules.decided(state))
             if not 0 <= state.current < n or (state.teams_alive > 1 and not alive[state.current]):
                 raise ValueError("joueur au trait invalide")
             state._hist = [

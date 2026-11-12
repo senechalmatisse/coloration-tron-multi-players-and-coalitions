@@ -1,0 +1,30 @@
+# Controle de zone (P09.2) : a la fin de chaque tour complet, une zone rapporte
+# un point a l'equipe qui y a seule au moins une tete vivante (regle V1 : head).
+# Une zone vide ou disputee (tetes de plusieurs equipes) ne rapporte rien.
+# Victoire : premier a target_score, sinon derniere equipe en vie, sinon plus
+# haut score apres max_rounds tours (egalite possible).
+# Les quatre zones 3x3 sont placees dans les coins, de facon symetrique par
+# rotation d'un quart de tour (comme le placement regular) : aucune equipe n'est
+# avantagee par la geometrie, seul l'ordre de jeu differe d'une partie a l'autre.
+# L'heuristique zone combine territoire, proximite des zones et avance au score.
+#   tron play configs/games/zone_control_16x16.yaml --no-gui --games 12 --out results/zone
+name: zone_control
+grid: 16
+seed: 13
+placement: {mode: regular, rotate: true}
+heuristic: {name: zone, territory: 0.5, proximity: 0.3, score: 0.2}
+rules:
+  mode: zone_control
+  zones:
+    - {x: 2, y: 2, width: 3, height: 3}
+    - {x: 11, y: 2, width: 3, height: 3}
+    - {x: 11, y: 11, width: 3, height: 3}
+    - {x: 2, y: 11, width: 3, height: 3}
+  zone_rule: head
+  target_score: 16
+  max_rounds: 150
+players:
+  - {name: a1, team: A, agent: social, depth: 2, profile: team}
+  - {name: b1, team: B, agent: maxn, depth: 2}
+  - {name: a2, team: A, agent: social, depth: 2, profile: team}
+  - {name: b2, team: B, agent: greedy}

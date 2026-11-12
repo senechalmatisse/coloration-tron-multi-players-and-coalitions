@@ -11,7 +11,8 @@ Versions du format (champ ``format`` de l'en-tête) :
 * ``tron-log/2`` : l'en-tête porte la configuration diplomatique complète
   (``diplomacy``) ; une ligne ``move`` peut porter ``diplomacy`` (événements
   d'alliance du demi-coup) ; la ligne ``result`` porte les métriques de partie.
-  Une ligne ``move`` peut aussi porter ``details`` : l'explication typée de la
+  Une ligne ``move`` peut aussi porter ``zone`` : les changements de contrôle des
+  zones à la fin d'un tour (mode ``zone_control``, P09), et ``details`` : l'explication typée de la
   décision (:class:`~tron.agents.base.DecisionDetails`), désactivable
   (``Recorder(path, details=False)``). Les champs ajoutés sont facultatifs : un
   journal v2 sans diplomatie ni détails se lit comme un journal v1.
@@ -70,6 +71,8 @@ def move_record(event: MoveEvent, details: bool = True) -> dict[str, Any]:
         record["diplomacy"] = [ev.to_dict() for ev in event.diplomacy]
     if details and event.details is not None:
         record["details"] = event.details.to_dict()
+    if event.zone:
+        record["zone"] = [list(z) for z in event.zone]
     return record
 
 

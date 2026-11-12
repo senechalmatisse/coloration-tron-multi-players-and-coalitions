@@ -79,6 +79,8 @@ def render_frame(
     if grid_lines and cell >= 6:
         img[::cell, :, :] = palette.grid
         img[:, ::cell, :] = palette.grid
+    if cell >= 4:
+        _draw_zones(img, state, palette, cell)
     if path and cell >= 4:
         lo, hi = cell // 3, cell - cell // 3
         for p, x, y in path:
@@ -101,6 +103,18 @@ def render_frame(
     if labels and cell >= 14 and Image is not None:
         img = _draw_labels(img, state, palette, cell)
     return img
+
+
+def _draw_zones(img: np.ndarray, state: GameState, palette: Palette, cell: int) -> None:
+    """Contour des zones du mode contrôle de zone (P09.2), à l'encre secondaire."""
+    edge = 2 if cell >= 10 else 1
+    for z in state.config.rules.zones:
+        x0, y0 = z.x * cell, z.y * cell
+        x1, y1 = (z.x + z.width) * cell, (z.y + z.height) * cell
+        img[y0 : y0 + edge, x0:x1] = palette.ink_secondary
+        img[y1 - edge : y1, x0:x1] = palette.ink_secondary
+        img[y0:y1, x0 : x0 + edge] = palette.ink_secondary
+        img[y0:y1, x1 - edge : x1] = palette.ink_secondary
 
 
 def _draw_labels(img: np.ndarray, state: GameState, palette: Palette, cell: int) -> np.ndarray:

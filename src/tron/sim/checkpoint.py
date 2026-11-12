@@ -64,6 +64,7 @@ def checkpoint_dict(match: Match) -> dict[str, Any]:
         "metrics": match.metrics.to_dict() if match.metrics is not None else None,
         "counters": {name.lstrip("_"): list(getattr(match, name)) for name in _COUNTERS},
         "started": match._started,
+        "zone_controllers": list(match._controllers),
         "moves": [*match.prior_moves, *(move_record(e) for e in match.events)],
         "result": match.result.to_dict() if match.result is not None else None,
     }
@@ -107,6 +108,22 @@ def read_checkpoint(path: str | Path) -> dict[str, Any]:
     return data
 
 
+def _zone_controllers(state: GameState, saved: Any) -> list[int]:
+    """Contrôleurs des zones au dernier tour complet (événements ``zone`` exacts, P09.2)."""
+    rules = state._rules
+    if rules is None:
+        return []
+    zones = len(rules.spec.zones)
+    teams = len(state.config.victory_names)
+    if (
+        not isinstance(saved, list)
+        or len(saved) != zones
+        or not all(type(t) is int and -1 <= t < teams for t in saved)
+    ):
+        raise CheckpointError("contrôleurs de zone absents ou incohérents avec la configuration")
+    return list(saved)
+
+
 def load_checkpoint(path: str | Path, observers: Sequence[MatchObserver] = ()) -> Match:
     """Reconstruit la partie sauvegardée, prête à continuer (``step`` ou ``run``)."""
     data = read_checkpoint(path)
@@ -148,6 +165,7 @@ def load_checkpoint(path: str | Path, observers: Sequence[MatchObserver] = ()) -
         if len(match.prior_moves) != state.ply:
             raise CheckpointError("nombre de coups enregistrés incohérent avec le demi-coup")
         match._resumed = bool(data.get("started", True))  # partie déjà commencée
+        match._controllers = _zone_controllers(state, data.get("zone_controllers"))
     except CheckpointError:
         raise
     except (ConfigError, KeyError, TypeError, ValueError) as exc:

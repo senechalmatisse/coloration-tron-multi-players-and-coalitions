@@ -275,7 +275,7 @@ class GameConfig:
                     raise ConfigError(f"position hors grille : ({x}, {y})")
         self.diplomacy.validate()
         try:
-            self.rules.validate()
+            self.rules.validate(w, h)
         except RulesError as exc:
             raise ConfigError(str(exc)) from exc
 
