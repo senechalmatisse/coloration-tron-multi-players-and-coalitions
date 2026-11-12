@@ -2,6 +2,7 @@
 
 from tron.core.config import (
     ConfigError,
+    DiplomacySpec,
     GameConfig,
     HeuristicSpec,
     PlacementSpec,
@@ -22,6 +23,7 @@ __all__ = [
     "SOUTH",
     "WEST",
     "ConfigError",
+    "DiplomacySpec",
     "GameConfig",
     "GameState",
     "HeuristicSpec",

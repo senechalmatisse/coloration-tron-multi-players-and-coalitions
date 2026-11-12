@@ -9,6 +9,7 @@ from dataclasses import asdict, dataclass
 from time import perf_counter
 from typing import Any, ClassVar
 
+from tron.agents.context import DecisionContext, DiplomacyIntent
 from tron.core.config import ConfigError, GameConfig
 from tron.core.directions import PASS
 from tron.core.rng import STREAM_AGENT, make_rng
@@ -43,10 +44,11 @@ class SearchStats:
 
 @dataclass(frozen=True, slots=True)
 class Decision:
-    """Coup choisi (direction 0 à 3, ou PASS) et statistiques associées."""
+    """Coup choisi (direction 0 à 3, ou PASS), statistiques et intention diplomatique."""
 
     move: int
     stats: SearchStats
+    diplomacy: DiplomacyIntent | None = None
 
 
 class Agent(ABC):
@@ -91,8 +93,18 @@ class Agent(ABC):
             return self.rounds * len(state.alive_players())
         return self.depth
 
-    def choose_move(self, state: GameState, player: int | None = None) -> Decision:
-        """Choisit le coup du joueur au trait. ``state`` est restauré à l'identique."""
+    def choose_move(
+        self,
+        state: GameState,
+        player: int | None = None,
+        context: DecisionContext | None = None,
+    ) -> Decision:
+        """Choisit le coup du joueur au trait. ``state`` est restauré à l'identique.
+
+        ``context`` (facultatif) apporte le demi-coup et l'état diplomatique ; les
+        agents qui ne s'en servent pas l'ignorent. L'intention diplomatique
+        éventuelle est formulée après le choix du coup (crochet :meth:`_diplomacy`).
+        """
         p = state.current if player is None else player
         if p != state.current:
             raise ValueError(f"le joueur {p} n'est pas au trait ({state.current})")
@@ -100,9 +112,22 @@ class Agent(ABC):
         moves = state.legal_moves()
         if not moves:
             return Decision(PASS, SearchStats(time=perf_counter() - t0, engine=self.name))
-        move, stats = self._decide(state, moves)
+        move, stats = self._decide_with_context(state, moves, context)
+        intent = self._diplomacy(state, move, context) if context is not None else None
         elapsed = perf_counter() - t0
-        return Decision(move, _with_time(stats, elapsed))
+        return Decision(move, _with_time(stats, elapsed), intent)
+
+    def _decide_with_context(
+        self, state: GameState, moves: list[int], context: DecisionContext | None
+    ) -> tuple[int, SearchStats]:
+        """Crochet de décision avec contexte ; par défaut, :meth:`_decide` sans contexte."""
+        return self._decide(state, moves)
+
+    def _diplomacy(
+        self, state: GameState, move: int, context: DecisionContext
+    ) -> DiplomacyIntent | None:
+        """Intention diplomatique de fin de décision (aucune par défaut)."""
+        return None
 
     @abstractmethod
     def _decide(self, state: GameState, moves: list[int]) -> tuple[int, SearchStats]:

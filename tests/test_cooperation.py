@@ -189,7 +189,7 @@ def test_campaign_analysis_produces_cooperation_outputs(tmp_path: Path) -> None:
     assert res.cooperation_conditions is not None
     assert any("cooperation_proxy_k" in p.name for p in res.figures)
     manifest = (tmp_path / "manifest.json").read_text(encoding="utf-8")
-    assert '"metrics_version": 1' in manifest
+    assert f'"metrics_version": {METRICS_VERSION}' in manifest
 
 
 def test_old_csv_without_metrics_is_still_analysed(tmp_path: Path) -> None:

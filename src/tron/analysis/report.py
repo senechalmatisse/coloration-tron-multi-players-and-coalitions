@@ -8,7 +8,13 @@ from pathlib import Path
 import pandas as pd
 
 from tron.analysis import figures
-from tron.analysis.cooperation import condition_summary, cooperation_summary, has_metrics
+from tron.analysis.cooperation import (
+    condition_summary,
+    cooperation_summary,
+    diplomacy_summary,
+    has_diplomacy,
+    has_metrics,
+)
 from tron.analysis.regression import default_formula, fit_logit
 from tron.analysis.stats import factor_columns, load_results, paired_comparisons, summarize
 
@@ -24,6 +30,7 @@ class AnalysisOutput:
     regression: Path | None = None
     cooperation: Path | None = None
     cooperation_conditions: Path | None = None
+    diplomacy: Path | None = None
     messages: list[str] = field(default_factory=list)
 
 
@@ -68,6 +75,11 @@ def analyze(
     # Métriques de coopération (P02) : absentes d'un CSV antérieur, sans effet sur le reste.
     if has_metrics(df):
         _cooperation_outputs(df, factors, out, result)
+    if has_diplomacy(df):
+        dipl = diplomacy_summary(df)
+        if not dipl.empty:
+            result.diplomacy = out / "diplomacy.csv"
+            dipl.to_csv(result.diplomacy, index=False)
     return result
 
 

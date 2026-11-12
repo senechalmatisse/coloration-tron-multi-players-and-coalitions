@@ -14,9 +14,16 @@ import numpy as np
 
 import tron
 from tron._jit import backend_name
-from tron.schema import MAX_PLAYERS, MAX_TEAMS, METRICS_VERSION, TEAM_METRIC_COLUMNS
+from tron.schema import (
+    DIPLOMACY_COLUMNS,
+    MAX_PLAYERS,
+    MAX_TEAMS,
+    METRICS_VERSION,
+    TEAM_METRIC_COLUMNS,
+)
 
 __all__ = [
+    "DIPLOMACY_COLUMNS",
     "MAX_PLAYERS",
     "MAX_TEAMS",
     "METRICS_VERSION",
@@ -94,6 +101,13 @@ class MatchMetrics:
     territory_share_mean: tuple[float | None, ...]
     collective_vs_individual_gap: tuple[float | None, ...]
     territory_observations: int
+    diplomacy_enabled: bool = False
+    proposals: int = 0
+    alliances_formed: int = 0
+    alliance_breaks: int = 0
+    betrayals: int = 0
+    rejected_intents: int = 0
+    alliance_duration_mean: float | None = None
 
     def team_value(self, field_name: str, team: int) -> Any:
         values: tuple[Any, ...] = getattr(self, field_name)
@@ -190,8 +204,9 @@ def _cell(value: Any) -> Any:
 def metrics_row(metrics: MatchMetrics | None, max_players: int = MAX_PLAYERS) -> dict[str, Any]:
     """Colonnes CSV des métriques : toujours les mêmes, vides si ``metrics`` est ``None``.
 
-    ``survival_p<i>`` par joueur, puis par équipe ``team_t<i>`` (nom) et les
-    colonnes de :data:`TEAM_METRIC_COLUMNS`. Le jeu de colonnes ne dépend ni de
+    ``survival_p<i>`` par joueur, par équipe ``team_t<i>`` (nom) et les colonnes
+    de :data:`TEAM_METRIC_COLUMNS`, puis la diplomatie (:data:`DIPLOMACY_COLUMNS`,
+    ``dipl_enabled`` valant 0 ou 1). Le jeu de colonnes ne dépend ni de
     la partie ni de l'activation des métriques : un fichier de résultats garde
     un en-tête unique.
     """
@@ -206,6 +221,9 @@ def metrics_row(metrics: MatchMetrics | None, max_players: int = MAX_PLAYERS) ->
         for prefix, field_name in TEAM_METRIC_COLUMNS:
             value = m.team_value(field_name, t) if m is not None and present else None
             row[f"{prefix}_t{t}"] = _cell(value)
+    for column, field_name in DIPLOMACY_COLUMNS:
+        value = getattr(m, field_name) if m is not None else None
+        row[column] = int(value) if isinstance(value, bool) else _cell(value)
     return row
 
 

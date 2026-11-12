@@ -224,6 +224,8 @@ def cmd_analyze(args: argparse.Namespace) -> int:
         print(f"coopération : {res.cooperation}")
     if res.cooperation_conditions:
         print(f"coopération par condition : {res.cooperation_conditions}")
+    if res.diplomacy:
+        print(f"diplomatie : {res.diplomacy}")
     for path in res.figures:
         print(f"figure : {path}")
     for msg in res.messages:

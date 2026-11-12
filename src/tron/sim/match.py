@@ -8,18 +8,21 @@ observateur parmi d'autres.
 
 from __future__ import annotations
 
+import inspect
 from collections.abc import Sequence
 from dataclasses import dataclass
 from time import perf_counter
 from typing import Protocol
 
 from tron.agents.base import Agent, SearchStats, build_agents
+from tron.agents.context import AllianceEvent, DecisionContext
 from tron.core.config import GameConfig
 from tron.core.directions import PASS
 from tron.core.state import GameState
 from tron.eval.voronoi import warmup
+from tron.sim.diplomacy import DiplomacyState, summarize_diplomacy
 from tron.sim.metrics import MetricsCollector
-from tron.sim.result import MatchResult, PlayerTotals
+from tron.sim.result import MatchMetrics, MatchResult, PlayerTotals
 
 _WARMED_UP = False
 
@@ -34,7 +37,11 @@ def ensure_warmup() -> None:
 
 @dataclass(frozen=True, slots=True)
 class MoveEvent:
-    """Un demi-coup joué : déplacement ou élimination."""
+    """Un demi-coup joué : déplacement ou élimination, et événements diplomatiques associés.
+
+    ``diplomacy`` contient, dans l'ordre, l'issue de l'intention du joueur (au
+    demi-coup ``ply``) puis les dissolutions et expirations constatées après le coup.
+    """
 
     ply: int
     player: int
@@ -43,6 +50,18 @@ class MoveEvent:
     target: tuple[int, int] | None
     eliminated: bool
     stats: SearchStats | None
+    diplomacy: tuple[AllianceEvent, ...] = ()
+
+
+def accepts_context(agent: Agent) -> bool:
+    """Vrai si ``agent.choose_move`` accepte le paramètre ``context`` (agents externes)."""
+    try:
+        params = inspect.signature(agent.choose_move).parameters
+    except (TypeError, ValueError):  # pragma: no cover - objet non introspectable
+        return False
+    return "context" in params or any(
+        p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values()
+    )
 
 
 class MatchObserver(Protocol):
@@ -88,6 +107,10 @@ class Match:
         self.metrics: MetricsCollector | None = (
             MetricsCollector(config, territory_every) if metrics else None
         )
+        self.diplomacy: DiplomacyState | None = (
+            DiplomacyState(config.diplomacy, config.n_players) if config.diplomacy.enabled else None
+        )
+        self._with_context = [accepts_context(a) for a in self.agents]
         self._started = False
         self._t0 = 0.0
         n = config.n_players
@@ -122,9 +145,18 @@ class Match:
             return None
         p = st.current
         stats: SearchStats | None = None
+        dipl: list[AllianceEvent] = []
         if st.has_legal_move(p):
-            decision = self.agents[p].choose_move(st.copy(history=False), p)
+            agent = self.agents[p]
+            view = st.copy(history=False)
+            if self._with_context[p]:
+                snap = self.diplomacy.snapshot(st.ply) if self.diplomacy is not None else None
+                decision = agent.choose_move(view, p, DecisionContext(st.ply, snap))
+            else:
+                decision = agent.choose_move(view, p)
             move, stats = decision.move, decision.stats
+            if decision.diplomacy is not None and self.diplomacy is not None:
+                dipl += self.diplomacy.apply_intent(p, decision.diplomacy, st.ply)
             self._decisions[p] += 1
             self._nodes[p] += stats.nodes
             self._time[p] += stats.time
@@ -134,6 +166,8 @@ class Match:
             move = PASS
         origin = st.head(p)
         moved = st.apply(move)
+        if self.diplomacy is not None:
+            dipl += self.diplomacy.advance(st.ply, [st.is_alive(q) for q in range(st.n)])
         event = MoveEvent(
             ply=st.ply - 1,
             player=p,
@@ -142,6 +176,7 @@ class Match:
             target=st.head(p) if moved else None,
             eliminated=not moved,
             stats=stats,
+            diplomacy=tuple(dipl),
         )
         self.events.append(event)
         if self.metrics is not None:
@@ -195,7 +230,17 @@ class Match:
             duration=perf_counter() - self._t0,
             totals=totals,
             positions=self.state.positions,
-            metrics=self.metrics.finish(self.state) if self.metrics is not None else None,
+            metrics=self._final_metrics(),
         )
         for obs in self.observers:
             obs.on_end(self, self.result)
+
+    def _final_metrics(self) -> MatchMetrics | None:
+        if self.metrics is None:
+            return None
+        summary = (
+            summarize_diplomacy(self.diplomacy.events, self.state.ply)
+            if self.diplomacy is not None
+            else None
+        )
+        return self.metrics.finish(self.state, summary)

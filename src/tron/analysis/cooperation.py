@@ -6,6 +6,8 @@ ni à l'affichage. Les définitions des métriques sont dans :mod:`tron.sim.metr
 * :func:`team_table` : format long, une ligne par (partie, équipe) ;
 * :func:`cooperation_summary` : agrégat par condition expérimentale et par équipe ;
 * :func:`condition_summary` : agrégat par condition, équipes d'au moins deux joueurs ;
+* :func:`diplomacy_summary` : propositions, alliances, ruptures, trahisons et durée
+  moyenne des alliances par condition (parties avec diplomatie active) ;
 * :func:`has_metrics` : faux pour un CSV produit avant l'introduction des métriques
   (les tables sont alors vides et l'analyse historique reste inchangée).
 """
@@ -19,7 +21,7 @@ import numpy as np
 import pandas as pd
 
 from tron.analysis.stats import factor_columns, wilson_interval
-from tron.schema import MAX_PLAYERS, MAX_TEAMS, TEAM_METRIC_COLUMNS
+from tron.schema import DIPLOMACY_COLUMNS, MAX_PLAYERS, MAX_TEAMS, TEAM_METRIC_COLUMNS
 
 METRIC_FIELDS: tuple[str, ...] = tuple(field for _, field in TEAM_METRIC_COLUMNS)
 """Métriques par équipe, dans l'ordre du schéma CSV."""
@@ -144,10 +146,49 @@ def condition_summary(df: pd.DataFrame, by: Sequence[str] | None = None) -> pd.D
     return pd.DataFrame(rows).drop(columns=["_all"], errors="ignore")
 
 
+def has_diplomacy(df: pd.DataFrame) -> bool:
+    """Vrai si au moins une partie du fichier a joué avec la diplomatie active."""
+    if "dipl_enabled" not in df.columns:
+        return False
+    return bool((pd.to_numeric(df["dipl_enabled"], errors="coerce") == 1).any())
+
+
+def diplomacy_summary(df: pd.DataFrame, by: Sequence[str] | None = None) -> pd.DataFrame:
+    """Par condition : moyennes par partie des comptes diplomatiques et durée des alliances.
+
+    Seules les parties avec diplomatie active sont prises en compte ; la colonne
+    ``games`` donne leur nombre. Vide si aucune partie n'a de diplomatie.
+    """
+    if not has_diplomacy(df):
+        return pd.DataFrame()
+    data = df[pd.to_numeric(df["dipl_enabled"], errors="coerce") == 1].copy()
+    cols = [c for c, _ in DIPLOMACY_COLUMNS if c != "dipl_enabled"]
+    for c in cols:
+        data[c] = pd.to_numeric(data[c], errors="coerce")
+    keys = list(by) if by is not None else factor_columns(df)
+    if not keys:
+        data = data.assign(_all=1)
+        keys = ["_all"]
+    rows = []
+    for values, g in data.groupby(keys, sort=True, dropna=False):
+        vals = values if isinstance(values, tuple) else (values,)
+        row: dict[str, Any] = dict(zip(keys, vals, strict=True))
+        row["games"] = len(g)
+        for c, name in DIPLOMACY_COLUMNS[1:]:
+            row[f"{name}_mean"] = float(g[c].mean()) if g[c].notna().any() else np.nan
+        row["games_with_alliance"] = int((g["dipl_formed"] > 0).sum())
+        if "focus_win" in g:
+            row["focus_win_rate"] = float(g["focus_win"].mean())
+        rows.append(row)
+    return pd.DataFrame(rows).drop(columns=["_all"], errors="ignore")
+
+
 __all__ = [
     "METRIC_FIELDS",
     "condition_summary",
     "cooperation_summary",
+    "diplomacy_summary",
+    "has_diplomacy",
     "has_metrics",
     "team_table",
 ]

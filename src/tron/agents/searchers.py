@@ -6,6 +6,7 @@ from collections.abc import Sequence
 from typing import Any, ClassVar
 
 from tron.agents.base import Agent, SearchStats, register_agent
+from tron.agents.context import DecisionContext, DiplomacyIntent
 from tron.agents.search import (
     BoundFn,
     SearchMemory,
@@ -18,9 +19,11 @@ from tron.agents.social import (
     LinearBound,
     Matrix,
     TwoCamp,
+    dynamic_matrix,
     is_identity,
     social_matrix,
     sparse_rows,
+    tactical_intent,
     two_camp_reduction,
 )
 from tron.core.config import ConfigError, GameConfig
@@ -170,8 +173,14 @@ class SocialAgent(SearchAgent):
     """Recherche à préférences sociales (matrice W, F4.2 à F4.6).
 
     Paramètres : ``profile`` (``maxn``, ``paranoid``, ``team``, ``team_paranoid``,
-    ``custom``), ``alpha`` (profil ``team``), ``matrix`` (profil ``custom``),
-    ``engine`` (``auto``, ``alphabeta``, ``maxn``).
+    ``custom``, ``dynamic_team``), ``alpha`` (profils ``team`` et ``dynamic_team``),
+    ``matrix`` (profil ``custom``), ``engine`` (``auto``, ``alphabeta``, ``maxn``).
+
+    Diplomatie (P03) : avec ``diplomacy`` vrai (par défaut pour ``dynamic_team``)
+    et la diplomatie de la partie activée, chaque décision utilise la matrice
+    dynamique W_t (:func:`~tron.agents.social.dynamic_matrix`) et se termine par
+    une intention de :func:`~tron.agents.social.tactical_intent` (paramètre
+    ``break_margin``). Sinon, la matrice statique historique est utilisée.
     """
 
     def __init__(
@@ -186,6 +195,8 @@ class SocialAgent(SearchAgent):
         ordering: str | None = None,
         iterative_deepening: bool | None = None,
         tt: bool | None = None,
+        diplomacy: bool | None = None,
+        break_margin: float = 0.15,
         **kwargs: Any,
     ) -> None:
         if profile not in PROFILES:
@@ -196,9 +207,14 @@ class SocialAgent(SearchAgent):
             w = social_matrix(profile, config.team_index, player, alpha, matrix)
         except ValueError as exc:
             raise ConfigError(str(exc)) from exc
+        if not 0.0 <= break_margin <= 1.0:
+            raise ConfigError("break_margin doit être dans [0, 1]")
         self.profile = profile
         self.alpha = alpha
         self.engine = engine
+        self.diplomatic = (profile == "dynamic_team") if diplomacy is None else bool(diplomacy)
+        self.break_margin = break_margin
+        self.base_matrix: Matrix = [row[:] for row in w]
         self.matrix: Matrix = w
         self._identity = is_identity(w)
         self._rows = sparse_rows(w)
@@ -218,6 +234,63 @@ class SocialAgent(SearchAgent):
             **kwargs,
         )
         self._bound: BoundFn = self._make_bound()
+
+    def reset(self) -> None:
+        super().reset()
+        self.set_matrix(self.base_matrix)
+
+    # ------------------------------------------------------- matrice dynamique
+    def set_matrix(self, w: Matrix) -> None:
+        """Remplace W (et les structures dérivées) si elle a changé."""
+        if w == self.matrix:
+            return
+        self.matrix = [row[:] for row in w]
+        self._identity = is_identity(self.matrix)
+        self._rows = sparse_rows(self.matrix)
+        self._reductions = {}
+        self._bound = self._make_bound()
+
+    def _diplomacy_active(self, context: DecisionContext | None) -> bool:
+        return (
+            self.diplomatic
+            and self.config.diplomacy.enabled
+            and context is not None
+            and context.diplomacy is not None
+        )
+
+    def _decide_with_context(
+        self, state: GameState, moves: list[int], context: DecisionContext | None
+    ) -> tuple[int, SearchStats]:
+        if self._diplomacy_active(context):
+            assert context is not None and context.diplomacy is not None
+            spec = self.config.diplomacy
+            self.set_matrix(
+                dynamic_matrix(
+                    self.base_matrix,
+                    context.diplomacy,
+                    spec.alliance_weight,
+                    spec.betrayal_penalty,
+                )
+            )
+        else:
+            self.set_matrix(self.base_matrix)
+        return self._decide(state, moves)
+
+    def _diplomacy(
+        self, state: GameState, move: int, context: DecisionContext
+    ) -> DiplomacyIntent | None:
+        if not self._diplomacy_active(context):
+            return None
+        assert context.diplomacy is not None
+        return tactical_intent(
+            self.player,
+            self.config.team_index,
+            [state.is_alive(q) for q in range(state.n)],
+            self.heuristic.shares(state),
+            context.diplomacy,
+            self.config.diplomacy.max_allies_per_player,
+            self.break_margin,
+        )
 
     def _make_bound(self) -> BoundFn:
         val = self.valuation
@@ -276,6 +349,6 @@ class SocialAgent(SearchAgent):
         )
 
     def describe(self) -> str:
-        extra = f",α={self.alpha}" if self.profile == "team" else ""
+        extra = f",α={self.alpha}" if self.profile in ("team", "dynamic_team") else ""
         unit = f"r={self.rounds}" if self.rounds is not None else f"d={self.depth}"
         return f"social[{self.profile}{extra}]({unit})"

@@ -14,7 +14,10 @@ Profils générés à partir des équipes (F4.3) :
   (propriété 2 de SOS) ;
 * ``team`` : W[p][p] = 1, W[p][j] = α pour chaque coéquipier j, 0 ailleurs ;
 * ``team_paranoid`` : les membres de l'équipe racine T ont la ligne 1_T, les
-  autres la ligne −1_T.
+  autres la ligne −1_T ;
+* ``dynamic_team`` (P03) : comme ``team`` pour la matrice de base W_base, plus
+  les alliances tactiques de la diplomatie (:func:`dynamic_matrix`) et la
+  politique diplomatique :func:`tactical_intent`.
 
 Choix du moteur (F4.4) : alpha-bêta complet quand W se ramène à deux camps, MaxN
 vectoriel sinon. Deux cas sont reconnus :
@@ -35,7 +38,9 @@ import math
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-PROFILES = ("maxn", "paranoid", "team", "team_paranoid", "custom")
+from tron.agents.context import DiplomacyIntent, DiplomacySnapshot
+
+PROFILES = ("maxn", "paranoid", "team", "team_paranoid", "custom", "dynamic_team")
 Matrix = list[list[float]]
 
 
@@ -55,7 +60,7 @@ def social_matrix(
         for p in range(n):
             w[p][root] = 1.0 if p == root else -1.0
         return w
-    if profile == "team":
+    if profile in ("team", "dynamic_team"):
         if not 0.0 <= alpha <= 1.0:
             raise ValueError("alpha doit être dans [0, 1]")
         return [
@@ -78,6 +83,107 @@ def social_matrix(
             raise ValueError("les poids doivent être dans [-1, 1] (SOS)")
         return w
     raise ValueError(f"profil inconnu : {profile} (attendu : {PROFILES})")
+
+
+def dynamic_matrix(
+    base: Sequence[Sequence[float]],
+    snapshot: DiplomacySnapshot,
+    alliance_weight: float,
+    betrayal_penalty: float = 0.0,
+) -> Matrix:
+    """Matrice W_t d'une décision, à partir de W_base et de l'état diplomatique (P03).
+
+    Ordre d'application, sans valeur cachée :
+
+    1. W_t = W_base ;
+    2. pour chaque alliance active (a, b) : W_t[a][b] = max(W_t[a][b], alliance_weight),
+       et de même pour W_t[b][a] (statut d'alliance symétrique) ;
+    3. si ``betrayal_penalty`` > 0 : W_t[p][q] -= betrayal_penalty × (trahisons de q
+       envers p) ;
+    4. bornage de chaque poids dans [−1, 1] (contrainte de SOS).
+
+    W_t est constante pendant une recherche : les agents ne simulent pas les
+    actions diplomatiques futures dans leur arbre (limite de la V1).
+    """
+    if not 0.0 <= alliance_weight <= 1.0:
+        raise ValueError("alliance_weight doit être dans [0, 1]")
+    if not 0.0 <= betrayal_penalty <= 1.0:
+        raise ValueError("betrayal_penalty doit être dans [0, 1]")
+    w = [[float(x) for x in row] for row in base]
+    for a, b in snapshot.active_pairs:
+        w[a][b] = max(w[a][b], alliance_weight)
+        w[b][a] = max(w[b][a], alliance_weight)
+    if betrayal_penalty > 0.0:
+        for p, row in enumerate(w):
+            for q in range(len(row)):
+                k = snapshot.betrayals[q][p]
+                if k and q != p:
+                    row[q] -= betrayal_penalty * k
+    return [[min(1.0, max(-1.0, x)) for x in row] for row in w]
+
+
+def tactical_intent(
+    player: int,
+    team: Sequence[int],
+    alive: Sequence[bool],
+    shares: Sequence[float],
+    snapshot: DiplomacySnapshot,
+    max_allies: int,
+    break_margin: float = 0.15,
+) -> DiplomacyIntent | None:
+    """Politique diplomatique simple et déterministe de la V1 (« contre le meneur »).
+
+    L'équipe meneuse est celle dont la somme des parts de territoire des membres
+    vivants est la plus grande (à égalité, le plus petit indice). Dans l'ordre :
+
+    1. **rompre** avec un allié de l'équipe meneuse si celle-ci devance l'équipe
+       du joueur de plus de ``break_margin`` ;
+    2. **accepter** (proposer en retour) la proposition en attente du proposant
+       de plus petit indice, si ce proposant n'est pas dans l'équipe meneuse
+       (sauf si c'est l'équipe du joueur qui mène) ;
+    3. **proposer**, si l'équipe du joueur ne mène pas, au joueur le plus fort
+       hors de l'équipe meneuse et de sa propre équipe.
+
+    Les coéquipiers permanents ne sont jamais candidats (ils sont déjà valorisés
+    par le profil). Aucune intention si le plafond d'alliés est atteint.
+    """
+    n = len(team)
+    my_team = team[player]
+    team_share: dict[int, float] = {}
+    for q in range(n):
+        if alive[q]:
+            team_share[team[q]] = team_share.get(team[q], 0.0) + shares[q]
+    if not team_share:
+        return None
+    leader = min(team_share, key=lambda t: (-team_share[t], t))
+    allies = snapshot.allies(player)
+    my_share = team_share.get(my_team, 0.0)
+    for q in allies:
+        tq = team[q]
+        if tq == leader and tq != my_team and team_share[tq] - my_share > break_margin:
+            return DiplomacyIntent("break", q)
+    if len(allies) >= max_allies:
+        return None
+
+    def eligible(q: int) -> bool:
+        return (
+            q != player
+            and alive[q]
+            and team[q] != my_team
+            and not snapshot.are_allied(player, q)
+            and not snapshot.in_cooldown(player, q)
+            and not snapshot.has_pending(player, q)
+        )
+
+    for q in snapshot.proposals_to(player):
+        if eligible(q) and (team[q] != leader or leader == my_team):
+            return DiplomacyIntent("propose", q)
+    if leader == my_team:
+        return None
+    candidates = [q for q in range(n) if eligible(q) and team[q] != leader]
+    if not candidates:
+        return None
+    return DiplomacyIntent("propose", max(candidates, key=lambda q: (shares[q], -q)))
 
 
 def sparse_rows(w: Matrix) -> list[list[tuple[int, float]] | None]:

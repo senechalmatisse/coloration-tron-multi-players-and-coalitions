@@ -40,6 +40,11 @@ Définitions (t est une équipe statique, ses joueurs sont ses « membres ») :
   longtemps que l'équipe, proche de 1 si l'équipe ne survit que grâce à un
   membre. ``None`` pour une équipe d'un joueur ou une survie d'équipe nulle.
 
+Diplomatie (P03, si elle est activée) : nombre de propositions, d'alliances
+formées, de ruptures, de trahisons (règle explicite de :mod:`tron.sim.diplomacy`),
+d'intentions refusées et durée moyenne des alliances (demi-coups ; une alliance
+encore active dure jusqu'à la fin de la partie).
+
 Limites : ces grandeurs décrivent des trajectoires, pas des intentions. Une
 « trahison » n'est pas déductible d'un simple déplacement ; elle n'est mesurée
 qu'avec la diplomatie explicite (propositions et ruptures d'alliance).
@@ -47,11 +52,14 @@ qu'avec la diplomatie explicite (propositions et ruptures d'alliance).
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
+from typing import Any
 
+from tron.agents.context import AllianceEvent
 from tron.core.config import GameConfig
 from tron.core.state import FREE, GameState
 from tron.eval.voronoi import VoronoiHeuristic
+from tron.sim.diplomacy import DiplomacySummary, summarize_diplomacy
 from tron.sim.result import METRICS_VERSION, MatchMetrics
 
 
@@ -170,8 +178,11 @@ class MetricsCollector:
         self._terr_obs += 1
 
     # --------------------------------------------------------------- bilan
-    def finish(self, state: GameState) -> MatchMetrics:
-        """Métriques de la partie à partir de l'état final (terminal ou non)."""
+    def finish(self, state: GameState, diplomacy: DiplomacySummary | None = None) -> MatchMetrics:
+        """Métriques de la partie à partir de l'état final (terminal ou non).
+
+        ``diplomacy`` : bilan diplomatique, ``None`` si la diplomatie est inactive.
+        """
         n = state.n
         total = state.ply
         survival = tuple(total if state.is_alive(p) else int(state.death_ply[p]) for p in range(n))
@@ -217,7 +228,22 @@ class MetricsCollector:
             territory_share_mean=tuple(terr),
             collective_vs_individual_gap=tuple(gap),
             territory_observations=self._terr_obs,
+            **_diplomacy_fields(diplomacy),
         )
+
+
+def _diplomacy_fields(summary: DiplomacySummary | None) -> dict[str, Any]:
+    if summary is None:
+        return {}
+    return {
+        "diplomacy_enabled": True,
+        "proposals": summary.proposals,
+        "alliances_formed": summary.alliances_formed,
+        "alliance_breaks": summary.alliance_breaks,
+        "betrayals": summary.betrayals,
+        "rejected_intents": summary.rejected_intents,
+        "alliance_duration_mean": summary.alliance_duration_mean,
+    }
 
 
 def metrics_from_moves(
@@ -225,11 +251,14 @@ def metrics_from_moves(
     positions: Iterable[tuple[int, int]],
     moves: Iterable[tuple[int, int]],
     territory_every: int | None = None,
+    diplomacy_events: Sequence[AllianceEvent] = (),
 ) -> MatchMetrics:
     """Recalcule les métriques en rejouant ``moves`` (couples joueur, direction).
 
     Fonction pure : sert à analyser un journal de partie après coup, y compris
-    un journal produit avant l'introduction des métriques.
+    un journal produit avant l'introduction des métriques. Les événements
+    diplomatiques du journal donnent le bilan diplomatique si la diplomatie de
+    la configuration est active.
     """
     state = GameState(config, positions=list(positions))
     collector = MetricsCollector(config, territory_every)
@@ -243,7 +272,8 @@ def metrics_from_moves(
         collector.record(
             state, player, origin, direction, state.head(player) if moved else None, not moved, ply
         )
-    return collector.finish(state)
+    summary = summarize_diplomacy(diplomacy_events, state.ply) if config.diplomacy.enabled else None
+    return collector.finish(state, summary)
 
 
 __all__ = ["MetricsCollector", "metrics_from_moves"]

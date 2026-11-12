@@ -15,10 +15,16 @@ Exemple de fichier YAML ::
 
 Les clés d'un joueur autres que ``name``, ``team``, ``agent`` et ``depth`` sont
 transmises à l'agent comme paramètres. Un joueur sans équipe forme sa propre équipe.
+
+Clé facultative ``diplomacy`` (alliances tactiques, voir :class:`DiplomacySpec`) ::
+
+    diplomacy: {enabled: true, proposal_ttl_plies: 8, max_allies_per_player: 2,
+                alliance_weight: 0.65, betrayal_penalty: 0.15, break_cooldown_plies: 4}
 """
 
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from pathlib import Path
@@ -43,6 +49,18 @@ _CONFIG_KEYS = frozenset(
         "heuristic",
         "players",
         "defaults",
+        "diplomacy",
+    }
+)
+_DIPLOMACY_KEYS = frozenset(
+    {
+        "enabled",
+        "proposal_ttl_plies",
+        "max_allies_per_player",
+        "alliance_weight",
+        "betrayal_penalty",
+        "break_cooldown_plies",
+        "free_action",
     }
 )
 
@@ -103,6 +121,55 @@ class HeuristicSpec:
 
 
 @dataclass(frozen=True, slots=True)
+class DiplomacySpec:
+    """Diplomatie tactique (P03) : alliances souples entre joueurs, hors règles de victoire.
+
+    Les alliances modifient seulement les préférences sociales des agents qui
+    les exploitent ; les équipes permanentes et la condition de victoire restent
+    celles de la configuration. ``free_action`` rend visible l'hypothèse de la
+    V1 : proposer ou rompre ne coûte pas de demi-coup (seule valeur acceptée).
+    """
+
+    enabled: bool = False
+    proposal_ttl_plies: int = 8
+    max_allies_per_player: int = 2
+    alliance_weight: float = 0.65
+    betrayal_penalty: float = 0.0
+    break_cooldown_plies: int = 4
+    free_action: bool = True
+
+    def validate(self) -> None:
+        if not isinstance(self.enabled, bool):
+            raise ConfigError("diplomacy.enabled doit être un booléen")
+        if self.proposal_ttl_plies < 1:
+            raise ConfigError("diplomacy.proposal_ttl_plies doit être >= 1")
+        if self.max_allies_per_player < 1:
+            raise ConfigError("diplomacy.max_allies_per_player doit être >= 1")
+        if not (math.isfinite(self.alliance_weight) and 0.0 <= self.alliance_weight <= 1.0):
+            raise ConfigError("diplomacy.alliance_weight doit être dans [0, 1]")
+        if not (math.isfinite(self.betrayal_penalty) and 0.0 <= self.betrayal_penalty <= 1.0):
+            raise ConfigError("diplomacy.betrayal_penalty doit être dans [0, 1]")
+        if self.break_cooldown_plies < 0:
+            raise ConfigError("diplomacy.break_cooldown_plies doit être >= 0")
+        if self.free_action is not True:
+            raise ConfigError(
+                "diplomacy.free_action : seule la valeur true est prise en charge "
+                "(une action diplomatique ne coûte pas de demi-coup)"
+            )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "enabled": self.enabled,
+            "proposal_ttl_plies": self.proposal_ttl_plies,
+            "max_allies_per_player": self.max_allies_per_player,
+            "alliance_weight": self.alliance_weight,
+            "betrayal_penalty": self.betrayal_penalty,
+            "break_cooldown_plies": self.break_cooldown_plies,
+            "free_action": self.free_action,
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class GameConfig:
     """Configuration complète et immuable d'une partie."""
 
@@ -114,6 +181,7 @@ class GameConfig:
     seed: int = 0
     first_player: int = 0
     name: str = "partie"
+    diplomacy: DiplomacySpec = field(default_factory=DiplomacySpec)
 
     def __post_init__(self) -> None:
         self._validate()
@@ -187,10 +255,11 @@ class GameConfig:
             for x, y in pl.positions:
                 if not (0 <= x < w and 0 <= y < h):
                     raise ConfigError(f"position hors grille : ({x}, {y})")
+        self.diplomacy.validate()
 
     # -------------------------------------------------------- sérialisation
     def to_dict(self) -> dict[str, Any]:
-        return {
+        data: dict[str, Any] = {
             "name": self.name,
             "grid": {"width": self.width, "height": self.height},
             "seed": self.seed,
@@ -199,6 +268,9 @@ class GameConfig:
             "heuristic": self.heuristic.to_dict(),
             "players": [p.to_dict() for p in self.players],
         }
+        if self.diplomacy != DiplomacySpec():  # clé omise par défaut : format historique
+            data["diplomacy"] = self.diplomacy.to_dict()
+        return data
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> GameConfig:
@@ -222,6 +294,7 @@ class GameConfig:
             seed=int(data.get("seed", 0)),
             first_player=int(data.get("first_player", 0)),
             name=str(data.get("name", "partie")),
+            diplomacy=_parse_diplomacy(data.get("diplomacy")),
         )
 
     @classmethod
@@ -293,6 +366,41 @@ def _parse_placement(raw: Any) -> PlacementSpec:
         min_distance=int(raw.get("min_distance", 3)),
         positions=positions,
     )
+
+
+def _parse_diplomacy(raw: Any) -> DiplomacySpec:
+    if raw is None:
+        return DiplomacySpec()
+    if isinstance(raw, bool):
+        return DiplomacySpec(enabled=raw)
+    if not isinstance(raw, Mapping):
+        raise ConfigError(f"diplomatie invalide : {raw!r}")
+    unknown = set(raw) - _DIPLOMACY_KEYS
+    if unknown:
+        raise ConfigError(f"clés de diplomatie inconnues : {sorted(unknown)}")
+    default = DiplomacySpec()
+    try:
+        return DiplomacySpec(
+            enabled=_strict_bool(raw.get("enabled", True), "diplomacy.enabled"),
+            proposal_ttl_plies=int(raw.get("proposal_ttl_plies", default.proposal_ttl_plies)),
+            max_allies_per_player=int(
+                raw.get("max_allies_per_player", default.max_allies_per_player)
+            ),
+            alliance_weight=float(raw.get("alliance_weight", default.alliance_weight)),
+            betrayal_penalty=float(raw.get("betrayal_penalty", default.betrayal_penalty)),
+            break_cooldown_plies=int(raw.get("break_cooldown_plies", default.break_cooldown_plies)),
+            free_action=_strict_bool(raw.get("free_action", True), "diplomacy.free_action"),
+        )
+    except (TypeError, ValueError) as exc:
+        if isinstance(exc, ConfigError):
+            raise
+        raise ConfigError(f"diplomatie invalide : {exc}") from exc
+
+
+def _strict_bool(value: Any, name: str) -> bool:
+    if not isinstance(value, bool):
+        raise ConfigError(f"{name} doit être un booléen : {value!r}")
+    return value
 
 
 def _parse_heuristic(raw: Any) -> HeuristicSpec:
