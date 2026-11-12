@@ -6,8 +6,11 @@ dessine la même scène avec ses propres primitives.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 import numpy as np
 
+from tron.core.directions import PASS
 from tron.core.state import FREE, GameState
 from tron.viz.palette import Palette, label_ink
 
@@ -36,6 +39,27 @@ def color_grid(state: GameState, palette: Palette, owners: np.ndarray | None = N
     return img
 
 
+def pv_path(state: GameState, moves: Sequence[int]) -> list[tuple[int, int, int]]:
+    """Cases (joueur, x, y) parcourues par la suite de coups ``moves`` depuis ``state``.
+
+    Sert à dessiner la variante principale d'une décision. ``state`` n'est pas
+    modifié ; le parcours s'arrête à la fin de partie ou à un coup impossible.
+    """
+    st = state.copy(history=False)
+    out: list[tuple[int, int, int]] = []
+    for m in moves:
+        if st.is_terminal():
+            break
+        p = st.current
+        if not 0 <= m <= 3 or m not in st.legal_moves():
+            st.apply(PASS)
+            continue
+        st.apply(m)
+        x, y = st.head(p)
+        out.append((p, x, y))
+    return out
+
+
 def render_frame(
     state: GameState,
     palette: Palette,
@@ -43,13 +67,22 @@ def render_frame(
     owners: np.ndarray | None = None,
     grid_lines: bool = True,
     labels: bool = True,
+    path: Sequence[tuple[int, int, int]] = (),
 ) -> np.ndarray:
-    """Image (H·cell, W·cell, 3) de l'état : murs, têtes, éliminés, territoires éventuels."""
+    """Image (H·cell, W·cell, 3) de l'état : murs, têtes, éliminés, territoires éventuels.
+
+    ``path`` (voir :func:`pv_path`) marque d'un carré central, à la couleur de tête
+    du joueur, les cases d'une variante principale.
+    """
     base = color_grid(state, palette, owners)
     img = np.repeat(np.repeat(base, cell, axis=0), cell, axis=1)
     if grid_lines and cell >= 6:
         img[::cell, :, :] = palette.grid
         img[:, ::cell, :] = palette.grid
+    if path and cell >= 4:
+        lo, hi = cell // 3, cell - cell // 3
+        for p, x, y in path:
+            img[y * cell + lo : y * cell + hi, x * cell + lo : x * cell + hi] = palette.head[p]
     ring = 2 if cell >= 10 else 1
     for p in range(state.n):
         x, y = state.head(p)

@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from time import perf_counter
 from typing import Protocol
 
-from tron.agents.base import Agent, SearchStats, build_agents
+from tron.agents.base import Agent, DecisionDetails, SearchStats, build_agents
 from tron.agents.context import AllianceEvent, DecisionContext
 from tron.core.config import GameConfig
 from tron.core.directions import PASS
@@ -51,6 +51,8 @@ class MoveEvent:
     eliminated: bool
     stats: SearchStats | None
     diplomacy: tuple[AllianceEvent, ...] = ()
+    details: DecisionDetails | None = None
+    """Explication de la décision (P07), ``None`` si l'agent n'en fournit pas."""
 
 
 def accepts_context(agent: Agent) -> bool:
@@ -146,6 +148,7 @@ class Match:
             return None
         p = st.current
         stats: SearchStats | None = None
+        details: DecisionDetails | None = None
         dipl: list[AllianceEvent] = []
         if st.has_legal_move(p):
             agent = self.agents[p]
@@ -155,7 +158,7 @@ class Match:
                 decision = agent.choose_move(view, p, DecisionContext(st.ply, snap))
             else:
                 decision = agent.choose_move(view, p)
-            move, stats = decision.move, decision.stats
+            move, stats, details = decision.move, decision.stats, decision.details
             if decision.diplomacy is not None and self.diplomacy is not None:
                 dipl += self.diplomacy.apply_intent(p, decision.diplomacy, st.ply)
             self._decisions[p] += 1
@@ -179,6 +182,7 @@ class Match:
             eliminated=not moved,
             stats=stats,
             diplomacy=tuple(dipl),
+            details=details,
         )
         self.events.append(event)
         target = event.target

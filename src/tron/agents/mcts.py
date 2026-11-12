@@ -42,7 +42,7 @@ from collections.abc import Sequence
 from time import perf_counter
 from typing import Any
 
-from tron.agents.base import Agent, SearchStats, register_agent
+from tron.agents.base import Agent, DecisionDetails, SearchStats, register_agent
 from tron.agents.social import PROFILES, social_matrix, sparse_rows
 from tron.core.config import ConfigError, GameConfig
 from tron.core.directions import PASS
@@ -205,6 +205,7 @@ class MCTSAgent(Agent):
     def _decide(self, state: GameState, moves: list[int]) -> tuple[int, SearchStats]:
         if len(moves) == 1 and self.forced_shortcut:
             self.last_root = {moves[0]: (0, math.nan)}
+            self._details = DecisionDetails(scores=((moves[0], None),), note="coup forcé")
             return moves[0], SearchStats(nodes=1, depth=0, engine="mcts", pv=(moves[0],))
         st = state.copy(history=False)  # l'état reçu n'est jamais modifié
         n = st.n
@@ -257,6 +258,14 @@ class MCTSAgent(Agent):
         move = self.pick(ties)
         chosen = next(ch for ch in root.children if ch.move == move)
         self.last_root = {ch.move: (ch.visits, self._utility(p, ch)) for ch in root.children}
+        self._details = DecisionDetails(
+            scores=tuple((m, self.last_root[m][1]) for m in moves if m in self.last_root),
+            visits=tuple((m, self.last_root[m][0]) for m in moves if m in self.last_root),
+            social_weights=tuple(
+                (j, w) for j, w in enumerate(self.matrix[p]) if w != 0.0 and self.profile != "maxn"
+            ),
+            note="utilité moyenne des simulations",
+        )
         pv = [move]
         node = chosen
         while node.children:

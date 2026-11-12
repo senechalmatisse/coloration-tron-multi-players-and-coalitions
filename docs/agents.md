@@ -100,7 +100,7 @@ Principe, statistiques et première comparaison : `docs/algorithmes.md`, §8. `t
 
 **Modèle d'adversaire** (`tron.agents.opponents.OpponentModel`). Pour chaque coup observé d'un adversaire q, le coup joué est comparé aux autres coups légaux de q selon quatre critères (agressif : réduire les options des autres puis se rapprocher ; territorial : part de Voronoi ; survie : taille de la région accessible puis mobilité ; coopératif : parts des partenaires). L'alignement vaut 0 pour le pire coup, 1 pour le meilleur, et n'est pas compté si tous les coups se valent. Les caractéristiques brutes (variations de mobilité, de territoire et de composantes, distance aux autres têtes, impact sur la mobilité des autres) sont aussi conservées dans la fenêtre. Les scores moyens, tirés vers ½ par deux observations fictives, donnent par softmax les probabilités des profils `aggressive`, `territorial`, `survival`, `cooperative` et `random_like`. Le modèle estime des probabilités à partir de choix observables : il ne prétend pas deviner une intention.
 
-**Ajustement.** w_t = (1 − λ)·w_base + λ·moyenne sur les adversaires de [g_q·Σ_k p_q(k)·T_k + (1 − g_q)·w_base], où g_q mesure la confiance au-dessus du hasard et T_k est la cible du profil :
+**Ajustement.** w_t = (1 − λ)·w_base + λ·moyenne sur les adversaires de [w_base + Σ_k e_q(k)·(T_k − w_base)], où e_q(k) = max(0, p_q(k) − p⁰(k)) est l'excès de probabilité du profil k par rapport aux probabilités sans aucune observation p⁰ (un adversaire non observé ne déplace pas les poids) et T_k est la cible du profil. Comme Σ_k e_q(k) ≤ 1, w_t reste une combinaison convexe de w_base et des cibles :
 
 | Profil estimé | Cible T_k | Intention |
 |---|---|---|

@@ -5,7 +5,7 @@
 * :class:`ReplaySource` : rejeu d'un journal JSONL, en avant comme en arrière
   (``undo``), avec accès direct à un demi-coup.
 * :class:`PlaybackController` : pause, pas à pas, vitesse réglable, surcouche
-  de Voronoi, et données du panneau d'information.
+  de Voronoi, données du panneau d'information et panneau de décision (P07).
 """
 
 from __future__ import annotations
@@ -16,12 +16,17 @@ from typing import Protocol
 
 import numpy as np
 
+from tron.agents.base import DecisionDetails
 from tron.core.config import GameConfig
+from tron.core.directions import direction_name, parse_direction
 from tron.core.rng import derive_seed
 from tron.core.state import GameState
 from tron.eval.voronoi import VoronoiHeuristic
 from tron.sim.match import Match, MoveEvent
 from tron.sim.recorder import GameLog, apply_logged
+from tron.viz.render import pv_path
+
+UNAVAILABLE = "non disponible"
 
 SPEEDS = (0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000)
 """Vitesses de lecture disponibles, en demi-coups par seconde."""
@@ -53,6 +58,93 @@ class PanelInfo:
     players: tuple[PlayerLine, ...]
     teams: tuple[tuple[str, float, int], ...]
     """(équipe, part de territoire, joueurs vivants)."""
+
+
+@dataclass(frozen=True, slots=True)
+class DecisionPanel:
+    """Dernière décision : coup, statistiques, alternatives, variante principale (P07).
+
+    Les valeurs que l'agent n'a pas calculées sont affichées « non disponible ».
+    """
+
+    ply: int
+    player: int
+    name: str
+    agent: str
+    move: str
+    value: float | None
+    depth: int | None
+    nodes: int | None
+    leaves: int | None
+    prunes: int | None
+    engine: str
+    pv: tuple[int, ...]
+    alternatives: tuple[tuple[str, str], ...]
+    extra: tuple[str, ...]
+
+    def lines(self, top: int = 4) -> list[str]:
+        """Texte du panneau (indépendant de la bibliothèque graphique)."""
+
+        def fmt(v: float | int | None, spec: str = "") -> str:
+            return UNAVAILABLE if v is None else format(v, spec)
+
+        pv = "".join(direction_name(d) for d in self.pv) or UNAVAILABLE
+        out = [
+            f"Décision {self.ply} · {self.player} {self.name} ({self.agent})",
+            f"coup {self.move} · valeur {fmt(self.value, '.4f')} · moteur {self.engine or '-'}",
+            f"profondeur {fmt(self.depth)} · nœuds {fmt(self.nodes)} · "
+            f"feuilles {fmt(self.leaves)} · coupes {fmt(self.prunes)}",
+            f"variante principale : {pv}",
+        ]
+        if self.alternatives:
+            alt = " · ".join(f"{d} {v}" for d, v in self.alternatives[:top])
+            out.append(f"coups : {alt}")
+        else:
+            out.append(f"coups : {UNAVAILABLE}")
+        out.extend(self.extra)
+        return out
+
+
+def _details_lines(details: DecisionDetails | None, names: list[str]) -> tuple[str, ...]:
+    if details is None:
+        return ()
+    out = []
+    if details.visits:
+        out.append("visites : " + " · ".join(f"{direction_name(m)} {k}" for m, k in details.visits))
+    if details.social_weights:
+        out.append(
+            "poids W : "
+            + " · ".join(
+                f"{names[j] if j < len(names) else j} {w:+.2f}" for j, w in details.social_weights
+            )
+        )
+    if details.allies:
+        out.append(
+            "alliés tactiques : "
+            + ", ".join(names[a] if a < len(names) else str(a) for a in details.allies)
+        )
+    if details.heuristic_weights:
+        out.append(
+            "poids : " + " · ".join(f"{k[:4]} {w:.2f}" for k, w in details.heuristic_weights)
+        )
+    if details.opponents:
+        out.append(
+            "profils : "
+            + " · ".join(
+                f"{names[q] if q < len(names) else q} {k} {p:.0%}" for q, k, p in details.opponents
+            )
+        )
+    if details.note:
+        out.append(details.note)
+    return tuple(out)
+
+
+def _alternatives(details: DecisionDetails | None) -> tuple[tuple[str, str], ...]:
+    if details is None:
+        return ()
+    return tuple(
+        (direction_name(m), UNAVAILABLE if v is None else f"{v:.4f}") for m, v in details.ranked()
+    )
 
 
 class Source(Protocol):
@@ -202,6 +294,7 @@ class PlaybackController:
         self.paused = paused
         self.speed_index = min(range(len(SPEEDS)), key=lambda i: abs(SPEEDS[i] - speed))
         self.show_voronoi = voronoi
+        self.show_decision = False
         self.max_steps = max_steps_per_update
         self._acc = 0.0
         self._heur: VoronoiHeuristic | None = None
@@ -226,6 +319,73 @@ class PlaybackController:
 
     def toggle_voronoi(self) -> None:
         self.show_voronoi = not self.show_voronoi
+
+    def toggle_decision(self) -> None:
+        self.show_decision = not self.show_decision
+
+    # ---------------------------------------------------------- décision (P07)
+    def decision_panel(self) -> DecisionPanel | None:
+        """Explication de la dernière décision jouée (``None`` avant le premier coup)."""
+        src = self.source
+        names = [p.name for p in src.config.players]
+        agents = src.agent_names
+        if isinstance(src, LiveSource):
+            events = [e for e in src.match.events if e.stats is not None]
+            if not events:
+                return None
+            e = events[-1]
+            s = e.stats
+            assert s is not None
+            return DecisionPanel(
+                ply=e.ply,
+                player=e.player,
+                name=names[e.player],
+                agent=agents[e.player] if e.player < len(agents) else "",
+                move=direction_name(e.direction),
+                value=s.value if math.isfinite(s.value) else None,
+                depth=s.depth,
+                nodes=s.nodes,
+                leaves=s.leaves,
+                prunes=s.prunes,
+                engine=s.engine,
+                pv=tuple(s.pv),
+                alternatives=_alternatives(e.details),
+                extra=_details_lines(e.details, names),
+            )
+        if isinstance(src, ReplaySource):
+            for i in range(src.index - 1, -1, -1):
+                rec = src.log.moves[i]
+                if "nodes" not in rec:
+                    continue
+                player = int(rec["player"])
+                details = src.log.details(i)
+                pv = tuple(parse_direction(c) for c in str(rec.get("pv", "")))
+                return DecisionPanel(
+                    ply=int(rec["ply"]),
+                    player=player,
+                    name=names[player],
+                    agent=agents[player] if player < len(agents) else "",
+                    move=str(rec["dir"]),
+                    value=rec.get("value"),
+                    depth=rec.get("depth"),
+                    nodes=rec.get("nodes"),
+                    leaves=rec.get("leaves"),
+                    prunes=rec.get("prunes"),
+                    engine=str(rec.get("engine", "")),
+                    pv=pv,
+                    alternatives=_alternatives(details),
+                    extra=_details_lines(details, names),
+                )
+            return None
+        return None  # pragma: no cover - autre source
+
+    def decision_path(self) -> list[tuple[int, int, int]]:
+        """Suite de la variante principale de la dernière décision, depuis l'état affiché."""
+        panel = self.decision_panel() if self.show_decision else None
+        st = self.source.state
+        if panel is None or len(panel.pv) < 2 or st.ply != panel.ply + 1:
+            return []
+        return pv_path(st, panel.pv[1:])
 
     def step_forward(self) -> bool:
         event = self.source.forward()

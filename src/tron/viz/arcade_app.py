@@ -6,6 +6,8 @@ Touches :
 * ``→`` et ``←`` : demi-coup suivant / précédent (le retour arrière n'existe qu'en rejeu)
 * ``↑`` et ``↓`` : vitesse
 * ``V`` : surcouche des territoires de Voronoi
+* ``D`` : panneau de la dernière décision (coup, valeurs des alternatives,
+  profondeur, nœuds, variante principale dessinée sur la grille, poids sociaux)
 * ``N`` : nouvelle partie (temps réel) ou retour au début (rejeu)
 * ``Début`` et ``Fin`` : début et fin de partie (rejeu)
 * ``S`` : capture d'écran (PNG)
@@ -41,8 +43,9 @@ MARGIN = 14
 FONT = ("Segoe UI", "Helvetica Neue", "Helvetica", "Arial", "DejaVu Sans")
 _HELP = (
     "Espace pause · → ← pas · ↑ ↓ vitesse",
-    "V Voronoi · N nouvelle · S capture · Échap quitter",
+    "V Voronoi · D décision · N nouvelle · S capture · Échap",
 )
+DECISION_LINES = 10
 
 
 def _require_arcade() -> Any:
@@ -172,6 +175,17 @@ class TronWindow(arcade.Window if arcade is not None else object):  # type: igno
             arc.Text(line, left, 34 - 16 * i, color=self.palette.muted, font_size=9, font_name=FONT)
             for i, line in enumerate(_HELP)
         ]
+        self.t_decision = [
+            arc.Text(
+                "",
+                MARGIN + 8,
+                MARGIN + 8 + 15 * (DECISION_LINES - 1 - i),
+                color=ink,
+                font_size=9,
+                font_name=FONT,
+            )
+            for i in range(DECISION_LINES)
+        ]
 
     def _center(self, x: int, y: int) -> tuple[float, float]:
         """Centre écran de la case (x, y) ; l'axe y d'arcade monte, celui de la grille descend."""
@@ -213,7 +227,31 @@ class TronWindow(arcade.Window if arcade is not None else object):  # type: igno
             else:
                 arc.draw_line(cx - half, cy - half, cx + half, cy + half, self.palette.ink, 2)
                 arc.draw_line(cx - half, cy + half, cx + half, cy - half, self.palette.ink, 2)
+        if self.controller.show_decision:
+            self._draw_decision()
         self._draw_panel()
+
+    def _draw_decision(self) -> None:
+        """Variante principale sur la grille et panneau texte de la dernière décision."""
+        arc = self._arc
+        q = self.cell / 3
+        for p, x, y in self.controller.decision_path():
+            cx, cy = self._center(x, y)
+            arc.draw_lrbt_rectangle_filled(
+                cx - q / 2, cx + q / 2, cy - q / 2, cy + q / 2, self.palette.head[p]
+            )
+        panel = self.controller.decision_panel()
+        lines = panel.lines() if panel is not None else ["Décision : aucune pour l'instant"]
+        lines = lines[:DECISION_LINES]
+        height = 15 * len(lines) + 12
+        arc.draw_lrbt_rectangle_filled(
+            MARGIN, MARGIN + self.grid_w, MARGIN, MARGIN + height, self.palette.grid
+        )
+        for i, line in enumerate(lines):
+            text = self.t_decision[i]
+            text.text = line
+            text.y = MARGIN + 8 + 15 * (len(lines) - 1 - i)
+            text.draw()
 
     def _draw_panel(self) -> None:
         arc = self._arc
@@ -279,6 +317,8 @@ class TronWindow(arcade.Window if arcade is not None else object):  # type: igno
             ctl.slower()
         elif symbol == key.V:
             ctl.toggle_voronoi()
+        elif symbol == getattr(key, "D", None):
+            ctl.toggle_decision()
         elif symbol == key.N:
             ctl.new_game()
         elif symbol == key.HOME and isinstance(ctl.source, ReplaySource):

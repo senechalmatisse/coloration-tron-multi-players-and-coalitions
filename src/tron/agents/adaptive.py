@@ -6,13 +6,15 @@ composite partagée. Avant chaque décision, il ajuste les poids de cette
 heuristique à partir des probabilités de profils estimées par
 :class:`~tron.agents.opponents.OpponentModel` :
 
-    w_t = (1 − λ)·w_base + λ·moyenne_q[ g_q·Σ_k p_q(k)·T_k + (1 − g_q)·w_base ]
+    w_t = (1 − λ)·w_base + λ·moyenne_q[ w_base + Σ_k e_q(k)·(T_k − w_base) ]
 
 * λ = ``adaptation_rate`` ∈ [0, 1] borne l'ajustement ;
 * w_base = poids de la configuration si l'heuristique est ``composite``, sinon le
   seul territoire (l'heuristique vaut alors exactement Voronoi) ;
-* g_q = max(0, (confiance_q − 1/5) / (4/5)) : un adversaire mal identifié ne
-  déplace pas les poids ;
+* e_q(k) = max(0, p_q(k) − p⁰(k)) : excès de probabilité du profil k par rapport
+  aux probabilités sans aucune observation p⁰ ; un adversaire non observé ou mal
+  identifié ne déplace donc pas les poids. Comme Σ_k e_q(k) ≤ 1, w_t reste une
+  combinaison convexe de w_base et des cibles (poids positifs, de somme 1) ;
 * T_k (:data:`TARGET_WEIGHTS`) : contre un adversaire ``aggressive``, plus de
   marge et de mobilité (échappatoires) ; ``territorial`` : plus de contrôle des
   passages ; ``survival`` : plus de territoire et de sorties pour couper ses
@@ -35,7 +37,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from tron.agents.base import AGENTS, Agent, SearchStats, make_agent, register_agent
+from tron.agents.base import (
+    AGENTS,
+    Agent,
+    DecisionDetails,
+    SearchStats,
+    make_agent,
+    register_agent,
+)
 from tron.agents.context import DecisionContext, DiplomacyIntent, DiplomacySnapshot
 from tron.agents.opponents import OpponentModel
 from tron.agents.social import tactical_intent
@@ -85,19 +94,27 @@ def adapted_weights(
     probabilities: list[dict[str, float]],
     rate: float,
     min_confidence: float,
+    baseline: dict[str, float] | None = None,
 ) -> dict[str, float]:
-    """Poids w_t (voir le module) ; ``base`` si λ = 0, sans adversaire ou trop peu confiant."""
+    """Poids w_t (voir le module) ; ``base`` si λ = 0, sans adversaire ou trop peu confiant.
+
+    ``baseline`` : probabilités sans observation p⁰ (uniformes par défaut).
+    """
     if rate <= 0.0 or not probabilities:
         return dict(base)
     if max(max(p.values()) for p in probabilities) < min_confidence:
         return dict(base)
+    ref = baseline or {k: 1.0 / len(probabilities[0]) for k in probabilities[0]}
     mix = dict.fromkeys(COMPONENTS, 0.0)
     for probs in probabilities:
-        conf = max(probs.values())
-        g = max(0.0, (conf - 0.2) / 0.8)
+        excess = {k: max(0.0, p - ref.get(k, 0.0)) for k, p in probs.items()}
         for comp in COMPONENTS:
-            target = sum(p * TARGET_WEIGHTS.get(k, base)[comp] for k, p in probs.items())
-            mix[comp] += (g * target + (1.0 - g) * base[comp]) / len(probabilities)
+            shift = sum(
+                e * (TARGET_WEIGHTS[k][comp] - base[comp])
+                for k, e in excess.items()
+                if k in TARGET_WEIGHTS
+            )
+            mix[comp] += (base[comp] + shift) / len(probabilities)
     return {c: (1.0 - rate) * base[c] + rate * mix[c] for c in COMPONENTS}
 
 
@@ -244,7 +261,13 @@ class AdaptiveAgent(Agent):
     # ------------------------------------------------------------- décision
     def _adapt(self, state: GameState) -> None:
         probs = list(self.opponent_probabilities(state).values())
-        w = adapted_weights(self.base_weights, probs, self.adaptation_rate, self.min_confidence)
+        w = adapted_weights(
+            self.base_weights,
+            probs,
+            self.adaptation_rate,
+            self.min_confidence,
+            self.model.baseline(),
+        )
         self.adaptive_heuristic.set_weights(w)
         self.weights_used = self.adaptive_heuristic.weights
 
@@ -254,11 +277,33 @@ class AdaptiveAgent(Agent):
         if context is not None:
             self._snapshot = context.diplomacy
         self._adapt(state)
-        return self.inner._decide_with_context(state, moves, context)
+        self.inner._details = None
+        out = self.inner._decide_with_context(state, moves, context)
+        self._details = self._explain(state, self.inner._details)
+        return out
 
     def _decide(self, state: GameState, moves: list[int]) -> tuple[int, SearchStats]:
         self._adapt(state)
-        return self.inner._decide(state, moves)
+        self.inner._details = None
+        out = self.inner._decide(state, moves)
+        self._details = self._explain(state, self.inner._details)
+        return out
+
+    def _explain(self, state: GameState, inner: DecisionDetails | None) -> DecisionDetails:
+        base = inner or DecisionDetails()
+        opponents = []
+        for q, probs in self.opponent_probabilities(state).items():
+            k = max(probs, key=lambda name: probs[name])
+            opponents.append((q, k, probs[k]))
+        return DecisionDetails(
+            scores=base.scores,
+            visits=base.visits,
+            social_weights=base.social_weights,
+            allies=base.allies,
+            heuristic_weights=tuple(sorted(self.weights_used.items())),
+            opponents=tuple(opponents),
+            note=base.note,
+        )
 
     def _diplomacy(
         self, state: GameState, move: int, context: DecisionContext

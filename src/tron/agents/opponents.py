@@ -269,6 +269,15 @@ class OpponentModel:
         total = sum(exps)
         return {name: e / total for name, e in zip(PROFILES, exps, strict=True)}
 
+    def baseline(self) -> dict[str, float]:
+        """Probabilités sans aucune observation (scores à ½) : référence « sans information »."""
+        beta = self.temperature
+        logits = [0.0] * len(BEHAVIOURS) + [beta * self.margin]
+        top = max(logits)
+        exps = [math.exp(z - top) for z in logits]
+        total = sum(exps)
+        return {name: e / total for name, e in zip(PROFILES, exps, strict=True)}
+
     def confidence(self, player: int) -> float:
         return max(self.probabilities(player).values())
 

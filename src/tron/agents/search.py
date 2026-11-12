@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from time import perf_counter
 
 from tron.core.directions import PASS
@@ -80,6 +80,10 @@ class SearchResult:
     engine: str = ""
     vector: list[float] | None = None
     completed: bool = True
+    exact: list[int] = field(default_factory=list)
+    """Coups racine dont la valeur est exacte (les autres ne sont que bornés par l'élagage)."""
+    pvs: dict[int, list[int]] = field(default_factory=dict)
+    """Variante principale de chaque coup racine exact (``pv`` est celle de ``best``)."""
 
 
 @dataclass(slots=True)
@@ -442,6 +446,8 @@ def _finish(
         depth=depth,
         engine=engine,
         vector=vector,
+        exact=sorted(pvs),
+        pvs={m: list(line) for m, line in pvs.items()},
     )
 
 

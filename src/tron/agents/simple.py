@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from tron.agents.base import Agent, SearchStats, register_agent
+from tron.agents.base import Agent, DecisionDetails, SearchStats, register_agent
 from tron.agents.search import EPS
 from tron.core.state import GameState
 
@@ -13,6 +13,9 @@ class RandomAgent(Agent):
 
     def _decide(self, state: GameState, moves: list[int]) -> tuple[int, SearchStats]:
         move = moves[int(self.rng.integers(len(moves)))]
+        self._details = DecisionDetails(
+            scores=tuple((m, None) for m in moves), note="coup sûr tiré au hasard"
+        )
         return move, SearchStats(nodes=1, depth=0, ties=len(moves), engine=self.name)
 
 
@@ -31,6 +34,7 @@ class GreedyAgent(Agent):
         best = max(values.values())
         ties = [m for m in moves if values[m] > best - EPS]
         move = self.pick(ties)
+        self._details = DecisionDetails(scores=tuple((m, values[m]) for m in moves))
         return move, SearchStats(
             nodes=len(moves) + 1,
             leaves=len(moves),

@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any, ClassVar
 
-from tron.agents.base import Agent, SearchStats, register_agent
+from tron.agents.base import Agent, DecisionDetails, SearchStats, register_agent
 from tron.agents.context import DecisionContext, DiplomacyIntent
 from tron.agents.search import (
     BoundFn,
@@ -72,12 +72,25 @@ class SearchAgent(Agent):
         self.memory.clear()
         self.last_result = None
 
+    def explain(self, result: SearchResult | None, moves: list[int]) -> DecisionDetails:
+        """Valeurs racine exactes (``None`` pour un coup seulement borné par l'élagage)."""
+        if result is None:
+            return DecisionDetails(scores=tuple((m, None) for m in moves), note="coup forcé")
+        exact = set(result.exact)
+        return DecisionDetails(
+            scores=tuple((m, result.root_values.get(m) if m in exact else None) for m in moves),
+        )
+
     def _decide(self, state: GameState, moves: list[int]) -> tuple[int, SearchStats]:
         if len(moves) == 1 and self.forced_shortcut:
+            self._details = self.explain(None, moves)
             return moves[0], SearchStats(nodes=1, depth=0, engine=self.engine_name(state))
         result = self.run_search(state, self.effective_depth(state))
         self.last_result = result
+        self._details = self.explain(result, moves)
         move = self.pick(result.ties)
+        # Variante principale du coup réellement choisi (parmi les ex aequo).
+        pv = result.pvs.get(move) or (result.pv if move == result.best else [move])
         return move, SearchStats(
             nodes=result.nodes,
             leaves=result.leaves,
@@ -86,7 +99,7 @@ class SearchAgent(Agent):
             depth=result.depth,
             ties=len(result.ties),
             engine=result.engine,
-            pv=tuple(result.pv),
+            pv=tuple(pv),
         )
 
     def engine_name(self, state: GameState) -> str:
@@ -216,6 +229,7 @@ class SocialAgent(SearchAgent):
         self.break_margin = break_margin
         self.base_matrix: Matrix = [row[:] for row in w]
         self.matrix: Matrix = w
+        self._allies: tuple[int, ...] = ()
         self._identity = is_identity(w)
         self._rows = sparse_rows(w)
         self._reductions: dict[tuple[bool, ...], TwoCamp | None] = {}
@@ -258,9 +272,21 @@ class SocialAgent(SearchAgent):
             and context.diplomacy is not None
         )
 
+    def explain(self, result: SearchResult | None, moves: list[int]) -> DecisionDetails:
+        base = super().explain(result, moves)
+        row = self.matrix[self.player]
+        return DecisionDetails(
+            scores=base.scores,
+            social_weights=tuple((j, w) for j, w in enumerate(row) if w != 0.0),
+            allies=self._allies,
+            note=base.note,
+        )
+
     def _decide_with_context(
         self, state: GameState, moves: list[int], context: DecisionContext | None
     ) -> tuple[int, SearchStats]:
+        snap = context.diplomacy if context is not None else None
+        self._allies = snap.allies(self.player) if snap is not None else ()
         if self._diplomacy_active(context):
             assert context is not None and context.diplomacy is not None
             spec = self.config.diplomacy

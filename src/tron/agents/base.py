@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import math
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass
 from time import perf_counter
 from typing import Any, ClassVar
 
 from tron.agents.context import DecisionContext, DiplomacyIntent
-from tron.core.config import ConfigError, GameConfig
+from tron.core.config import ConfigError, GameConfig, HeuristicSpec
 from tron.core.directions import PASS
 from tron.core.rng import STREAM_AGENT, make_rng
 from tron.core.state import GameState
@@ -42,13 +42,87 @@ class SearchStats:
         return data
 
 
+def _finite(value: float | None) -> float | None:
+    return value if value is not None and math.isfinite(value) else None
+
+
+@dataclass(frozen=True, slots=True)
+class DecisionDetails:
+    """Explication typée et sérialisable d'une décision (P07).
+
+    Un agent ne renseigne que ce qu'il a réellement calculé. Dans ``scores``,
+    ``None`` signifie « non disponible » (coup élagué ou seulement borné par la
+    recherche) : aucune valeur n'est reconstruite après coup.
+
+    * ``scores`` : (direction, valeur pour l'agent) de chaque coup légal à la racine ;
+    * ``visits`` : (direction, visites) des coups racine (MCTS) ;
+    * ``social_weights`` : coefficients non nuls de la ligne W[p] utilisée ;
+    * ``allies`` : alliés tactiques au moment de la décision ;
+    * ``heuristic_weights`` : poids de l'heuristique composite utilisés (agent adaptatif) ;
+    * ``opponents`` : (adversaire, profil le plus probable, probabilité) ;
+    * ``note`` : remarque courte (coup forcé, coup tiré au hasard…).
+    """
+
+    scores: tuple[tuple[int, float | None], ...] = ()
+    visits: tuple[tuple[int, int], ...] = ()
+    social_weights: tuple[tuple[int, float], ...] = ()
+    allies: tuple[int, ...] = ()
+    heuristic_weights: tuple[tuple[str, float], ...] = ()
+    opponents: tuple[tuple[int, str, float], ...] = ()
+    note: str = ""
+
+    def score_of(self, move: int) -> float | None:
+        return next((v for m, v in self.scores if m == move), None)
+
+    def ranked(self) -> list[tuple[int, float | None]]:
+        """Coups racine du meilleur au moins bon ; les valeurs non disponibles en dernier."""
+        known = [(m, v) for m, v in self.scores if v is not None]
+        known.sort(key=lambda x: -(x[1] or 0.0))
+        return known + [(m, v) for m, v in self.scores if v is None]
+
+    def to_dict(self) -> dict[str, Any]:
+        """Représentation JSON compacte (champs vides omis, valeurs non finies → ``null``)."""
+        data: dict[str, Any] = {}
+        if self.scores:
+            data["scores"] = [[m, _finite(v)] for m, v in self.scores]
+        if self.visits:
+            data["visits"] = [[m, k] for m, k in self.visits]
+        if self.social_weights:
+            data["social_weights"] = [[j, w] for j, w in self.social_weights]
+        if self.allies:
+            data["allies"] = list(self.allies)
+        if self.heuristic_weights:
+            data["heuristic_weights"] = {k: w for k, w in self.heuristic_weights}
+        if self.opponents:
+            data["opponents"] = [[q, k, p] for q, k, p in self.opponents]
+        if self.note:
+            data["note"] = self.note
+        return data
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> DecisionDetails:
+        hw = data.get("heuristic_weights") or {}
+        return cls(
+            scores=tuple(
+                (int(m), None if v is None else float(v)) for m, v in data.get("scores", ())
+            ),
+            visits=tuple((int(m), int(k)) for m, k in data.get("visits", ())),
+            social_weights=tuple((int(j), float(w)) for j, w in data.get("social_weights", ())),
+            allies=tuple(int(a) for a in data.get("allies", ())),
+            heuristic_weights=tuple((str(k), float(w)) for k, w in hw.items()),
+            opponents=tuple((int(q), str(k), float(p)) for q, k, p in data.get("opponents", ())),
+            note=str(data.get("note", "")),
+        )
+
+
 @dataclass(frozen=True, slots=True)
 class Decision:
-    """Coup choisi (direction 0 à 3, ou PASS), statistiques et intention diplomatique."""
+    """Coup choisi (direction 0 à 3, ou PASS), statistiques, intention et explication."""
 
     move: int
     stats: SearchStats
     diplomacy: DiplomacyIntent | None = None
+    details: DecisionDetails | None = None
 
 
 class Agent(ABC):
@@ -56,7 +130,9 @@ class Agent(ABC):
 
     Paramètres communs : ``depth`` (plies), ``rounds`` (tours complets : la
     profondeur vaut alors rounds × joueurs vivants), ``tie_break`` (``random``
-    tiré avec la graine de la partie, ou ``fixed`` = ordre N, E, S, O).
+    tiré avec la graine de la partie, ou ``fixed`` = ordre N, E, S, O) et
+    ``heuristic`` (instance, nom ou ``{name, ...}`` : heuristique propre au
+    joueur, sinon celle de la configuration).
     """
 
     name: ClassVar[str] = "?"
@@ -70,7 +146,7 @@ class Agent(ABC):
         rounds: int | None = None,
         tie_break: str = "random",
         seed: int | None = None,
-        heuristic: Heuristic | None = None,
+        heuristic: Heuristic | str | Mapping[str, Any] | None = None,
     ) -> None:
         if tie_break not in TIE_BREAKS:
             raise ConfigError(f"départage inconnu : {tie_break} (attendu : {TIE_BREAKS})")
@@ -82,10 +158,16 @@ class Agent(ABC):
         self.rounds = rounds
         self.tie_break = tie_break
         self.rng = make_rng(config.seed if seed is None else seed, STREAM_AGENT, player)
-        self.heuristic = heuristic or make_heuristic(
-            config.heuristic, config.width, config.height, config.n_players
-        )
+        if heuristic is None or isinstance(heuristic, str | Mapping):
+            spec = config.heuristic if heuristic is None else _heuristic_spec(heuristic)
+            try:
+                heuristic = make_heuristic(spec, config.width, config.height, config.n_players)
+            except ValueError as exc:
+                raise ConfigError(str(exc)) from exc
+        self.heuristic: Heuristic = heuristic
         self.valuation = Valuation(config, self.heuristic)
+        self._details: DecisionDetails | None = None
+        """Explication de la décision en cours, renseignée par ``_decide`` (P07)."""
 
     def effective_depth(self, state: GameState) -> int:
         """Profondeur en plies pour l'état courant."""
@@ -112,10 +194,12 @@ class Agent(ABC):
         moves = state.legal_moves()
         if not moves:
             return Decision(PASS, SearchStats(time=perf_counter() - t0, engine=self.name))
+        self._details = None
         move, stats = self._decide_with_context(state, moves, context)
+        details = self._details
         intent = self._diplomacy(state, move, context) if context is not None else None
         elapsed = perf_counter() - t0
-        return Decision(move, _with_time(stats, elapsed), intent)
+        return Decision(move, _with_time(stats, elapsed), intent, details)
 
     def _decide_with_context(
         self, state: GameState, moves: list[int], context: DecisionContext | None
@@ -161,6 +245,14 @@ class Agent(ABC):
 
     def describe(self) -> str:
         return f"{self.name}(d={self.depth})"
+
+
+def _heuristic_spec(value: str | Mapping[str, Any]) -> HeuristicSpec:
+    """Heuristique propre à un joueur (clé ``heuristic`` du joueur dans le YAML)."""
+    if isinstance(value, str):
+        return HeuristicSpec(name=value)
+    params = {k: v for k, v in value.items() if k != "name"}
+    return HeuristicSpec(name=str(value.get("name", "voronoi")), params=params)
 
 
 def _with_time(stats: SearchStats, elapsed: float) -> SearchStats:

@@ -11,8 +11,10 @@ Versions du format (champ ``format`` de l'en-tête) :
 * ``tron-log/2`` : l'en-tête porte la configuration diplomatique complète
   (``diplomacy``) ; une ligne ``move`` peut porter ``diplomacy`` (événements
   d'alliance du demi-coup) ; la ligne ``result`` porte les métriques de partie.
-  Les champs ajoutés sont facultatifs : un journal v2 sans diplomatie se lit
-  comme un journal v1.
+  Une ligne ``move`` peut aussi porter ``details`` : l'explication typée de la
+  décision (:class:`~tron.agents.base.DecisionDetails`), désactivable
+  (``Recorder(path, details=False)``). Les champs ajoutés sont facultatifs : un
+  journal v2 sans diplomatie ni détails se lit comme un journal v1.
 """
 
 from __future__ import annotations
@@ -24,6 +26,7 @@ from pathlib import Path
 from typing import IO, Any
 
 import tron
+from tron.agents.base import DecisionDetails
 from tron.agents.context import AllianceEvent
 from tron.core.config import GameConfig
 from tron.core.directions import direction_name, parse_direction
@@ -43,8 +46,9 @@ class LogError(ValueError):
 class Recorder:
     """Observateur qui écrit le journal JSONL d'une partie."""
 
-    def __init__(self, path: str | Path) -> None:
+    def __init__(self, path: str | Path, details: bool = True) -> None:
         self.path = Path(path)
+        self.details = details
         self._fh: IO[str] | None = None
 
     def _write(self, record: dict[str, Any]) -> None:
@@ -84,9 +88,14 @@ class Recorder:
                 depth=s.depth,
                 ties=s.ties,
                 engine=s.engine,
+                leaves=s.leaves,
+                prunes=s.prunes,
+                pv="".join(direction_name(d) for d in s.pv),
             )
         if event.diplomacy:
             record["diplomacy"] = [ev.to_dict() for ev in event.diplomacy]
+        if self.details and event.details is not None:
+            record["details"] = event.details.to_dict()
         self._write(record)
 
     def on_end(self, match: Match, result: MatchResult) -> None:
@@ -164,6 +173,16 @@ class GameLog:
         for rec, d in zip(self.moves, self.directions, strict=True):
             apply_logged(st, rec, d)
         return st
+
+    def details(self, index: int) -> DecisionDetails | None:
+        """Explication enregistrée du demi-coup ``index`` (``None`` si absente)."""
+        data = self.moves[index].get("details")
+        if not data:
+            return None
+        try:
+            return DecisionDetails.from_dict(data)
+        except (TypeError, ValueError, AttributeError) as exc:
+            raise LogError(f"demi-coup {index} : détails de décision invalides") from exc
 
     def diplomacy_events(self) -> list[AllianceEvent]:
         """Événements diplomatiques du journal, dans l'ordre (vide pour tron-log/1)."""
