@@ -16,6 +16,7 @@ Exemple ::
     design: full               # full | {type: subset, n: 40, seed: 1} | {type: list, ...}
     exclude: [{k: 5, grid: 10}]
     key_conditions: {games: 200, where: [{k: 3, grid: 20}]}
+    metrics: true              # métriques de coopération (colonnes vides si false)
 
 Graines appariées : la graine de la partie g dépend seulement de la graine du
 plan et de g (et non de la condition) ; toutes les conditions de même nombre de
@@ -52,6 +53,7 @@ _PLAN_KEYS = frozenset(
         "exclude",
         "key_conditions",
         "logs",
+        "metrics",
         "description",
     }
 )
@@ -85,6 +87,7 @@ class Task:
     first_player: int
     factors: dict[str, Any]
     config: dict[str, Any]
+    metrics: bool = True
 
     @property
     def key(self) -> tuple[str, int]:
@@ -115,6 +118,7 @@ class Plan:
     exclude: list[dict[str, Any]] = field(default_factory=list)
     key_conditions: dict[str, Any] = field(default_factory=dict)
     logs: bool = False
+    metrics: bool = True
     description: str = ""
 
     def __post_init__(self) -> None:
@@ -148,6 +152,7 @@ class Plan:
                 exclude=list(data.get("exclude") or []),
                 key_conditions=dict(data.get("key_conditions") or {}),
                 logs=bool(data.get("logs", False)),
+                metrics=bool(data.get("metrics", True)),
                 description=str(data.get("description", "")),
             )
         except KeyError as exc:
@@ -170,6 +175,7 @@ class Plan:
             "exclude": self.exclude,
             "key_conditions": self.key_conditions,
             "logs": self.logs,
+            "metrics": self.metrics,
             "description": self.description,
         }
 
@@ -224,6 +230,7 @@ class Plan:
                         first_player=g % n,
                         factors=cond.factors,
                         config=cond.config,
+                        metrics=self.metrics,
                     )
                 )
         return tasks

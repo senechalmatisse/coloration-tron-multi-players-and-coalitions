@@ -8,8 +8,12 @@ from pathlib import Path
 import pandas as pd
 
 from tron.analysis import figures
+from tron.analysis.cooperation import condition_summary, cooperation_summary, has_metrics
 from tron.analysis.regression import default_formula, fit_logit
 from tron.analysis.stats import factor_columns, load_results, paired_comparisons, summarize
+
+COOPERATION_AXES = ("f_k", "f_coalition_depth", "f_grid", "f_composition")
+"""Facteurs candidats (dans cet ordre) pour la figure de l'indice de coopération."""
 
 
 @dataclass
@@ -18,6 +22,8 @@ class AnalysisOutput:
     figures: list[Path] = field(default_factory=list)
     paired: Path | None = None
     regression: Path | None = None
+    cooperation: Path | None = None
+    cooperation_conditions: Path | None = None
     messages: list[str] = field(default_factory=list)
 
 
@@ -58,7 +64,45 @@ def analyze(
             result.regression = out / "regression.txt"
             result.regression.write_text(reg.to_text() + "\n", encoding="utf-8")
             reg.table.to_csv(out / "regression.csv", index=False)
+
+    # Métriques de coopération (P02) : absentes d'un CSV antérieur, sans effet sur le reste.
+    if has_metrics(df):
+        _cooperation_outputs(df, factors, out, result)
     return result
+
+
+def _cooperation_outputs(
+    df: pd.DataFrame, factors: list[str], out: Path, result: AnalysisOutput
+) -> None:
+    coop = cooperation_summary(df)
+    if coop.empty:
+        return
+    result.cooperation = out / "cooperation.csv"
+    coop.to_csv(result.cooperation, index=False)
+    cond = condition_summary(df)
+    if not cond.empty:
+        result.cooperation_conditions = out / "cooperation_conditions.csv"
+        cond.to_csv(result.cooperation_conditions, index=False)
+    axis = next((f for f in COOPERATION_AXES if f in factors and coop[f].nunique() > 1), None)
+    if axis is None:
+        return
+    multi = coop[coop["team_size"] >= 2]
+    if not multi.empty and multi["cooperation_proxy_mean"].notna().any():
+        others = [f for f in factors if f != axis and multi[f].nunique() > 1]
+        data = multi.groupby([axis, "team"], as_index=False)["cooperation_proxy_mean"].mean()
+        result.figures.append(
+            figures.metric_vs_factor(data, out / f"cooperation_proxy_{axis[2:]}.png", x=axis)
+        )
+        if others:
+            result.messages.append(
+                "figure de coopération moyennée sur : " + ", ".join(f[2:] for f in others)
+            )
+    data = coop.groupby([axis, "team"], as_index=False)["team_survival_plies_mean"].mean()
+    result.figures.append(
+        figures.metric_vs_factor(
+            data, out / f"team_survival_{axis[2:]}.png", metric="team_survival_plies_mean", x=axis
+        )
+    )
 
 
 def _groups(

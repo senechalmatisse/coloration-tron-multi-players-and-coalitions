@@ -1,17 +1,28 @@
-"""Simulation : boucle de partie, journal JSONL, rejeu, arène."""
+"""Simulation : boucle de partie, journal JSONL, rejeu, arène, métriques de partie."""
 
 from tron.sim.arena import game_config, run_arena
 from tron.sim.match import Match, MatchObserver, MoveEvent, ensure_warmup
+from tron.sim.metrics import MetricsCollector, metrics_from_moves
 from tron.sim.recorder import LOG_FORMAT, GameLog, LogError, Recorder
-from tron.sim.result import MatchResult, PlayerTotals, environment_info, git_hash
+from tron.sim.result import (
+    METRICS_VERSION,
+    MatchMetrics,
+    MatchResult,
+    PlayerTotals,
+    environment_info,
+    git_hash,
+)
 
 __all__ = [
     "LOG_FORMAT",
+    "METRICS_VERSION",
     "GameLog",
     "LogError",
     "Match",
+    "MatchMetrics",
     "MatchObserver",
     "MatchResult",
+    "MetricsCollector",
     "MoveEvent",
     "PlayerTotals",
     "Recorder",
@@ -19,5 +30,6 @@ __all__ = [
     "environment_info",
     "game_config",
     "git_hash",
+    "metrics_from_moves",
     "run_arena",
 ]

@@ -18,6 +18,7 @@ from tron.core.config import GameConfig
 from tron.core.directions import PASS
 from tron.core.state import GameState
 from tron.eval.voronoi import warmup
+from tron.sim.metrics import MetricsCollector
 from tron.sim.result import MatchResult, PlayerTotals
 
 _WARMED_UP = False
@@ -55,7 +56,13 @@ class MatchObserver(Protocol):
 
 
 class Match:
-    """Une partie entre agents, pilotable coup par coup (``step``) ou d'un bloc (``run``)."""
+    """Une partie entre agents, pilotable coup par coup (``step``) ou d'un bloc (``run``).
+
+    ``metrics`` active le calcul des métriques de coopération (P02, voir
+    :mod:`tron.sim.metrics`) ; ``territory_every`` règle l'observation du
+    territoire (``None`` : tous les n demi-coups, 0 : jamais). Les métriques
+    n'influencent ni les règles ni les décisions.
+    """
 
     def __init__(
         self,
@@ -63,6 +70,9 @@ class Match:
         agents: Sequence[Agent] | None = None,
         observers: Sequence[MatchObserver] = (),
         positions: Sequence[tuple[int, int]] | None = None,
+        *,
+        metrics: bool = True,
+        territory_every: int | None = None,
     ) -> None:
         ensure_warmup()
         self.config = config
@@ -75,6 +85,9 @@ class Match:
         self.observers: list[MatchObserver] = list(observers)
         self.events: list[MoveEvent] = []
         self.result: MatchResult | None = None
+        self.metrics: MetricsCollector | None = (
+            MetricsCollector(config, territory_every) if metrics else None
+        )
         self._started = False
         self._t0 = 0.0
         n = config.n_players
@@ -95,6 +108,8 @@ class Match:
         if not self._started:
             self._started = True
             self._t0 = perf_counter()
+            if self.metrics is not None:
+                self.metrics.start(self.state)
             for obs in self.observers:
                 obs.on_start(self)
 
@@ -129,6 +144,8 @@ class Match:
             stats=stats,
         )
         self.events.append(event)
+        if self.metrics is not None:
+            self.metrics.record(st, p, origin, move, event.target, event.eliminated, event.ply)
         for obs in self.observers:
             obs.on_event(self, event)
         if st.is_terminal():
@@ -178,6 +195,7 @@ class Match:
             duration=perf_counter() - self._t0,
             totals=totals,
             positions=self.state.positions,
+            metrics=self.metrics.finish(self.state) if self.metrics is not None else None,
         )
         for obs in self.observers:
             obs.on_end(self, self.result)

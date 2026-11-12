@@ -19,7 +19,8 @@ from tron.core.config import GameConfig
 from tron.core.directions import direction_name, parse_direction
 from tron.core.state import GameState
 from tron.sim.match import Match, MoveEvent
-from tron.sim.result import MatchResult, nan_to_none
+from tron.sim.metrics import metrics_from_moves
+from tron.sim.result import MatchMetrics, MatchResult, nan_to_none
 
 LOG_FORMAT = "tron-log/1"
 
@@ -144,6 +145,13 @@ class GameLog:
         for rec, d in zip(self.moves, self.directions, strict=True):
             apply_logged(st, rec, d)
         return st
+
+    def metrics(self, territory_every: int | None = None) -> MatchMetrics:
+        """Recalcule les métriques de coopération en rejouant le journal (tout format)."""
+        moves = [
+            (int(rec["player"]), d) for rec, d in zip(self.moves, self.directions, strict=True)
+        ]
+        return metrics_from_moves(self.config, self.positions, moves, territory_every)
 
 
 def apply_logged(state: GameState, record: dict[str, Any], direction: int) -> None:

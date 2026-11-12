@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import warnings
 from pathlib import Path
 from typing import IO, Any
 
@@ -13,6 +14,12 @@ class ResultStore:
     À l'ouverture, une dernière ligne incomplète (interruption pendant
     l'écriture) est supprimée ; ``completed()`` liste les parties déjà jouées
     pour la reprise.
+
+    Reprise d'un fichier écrit par une version antérieure : si ses colonnes sont
+    un sous-ensemble des nouvelles (colonnes ajoutées, par exemple les métriques
+    de coopération), les lignes suivantes sont écrites avec l'ancien en-tête et
+    les colonnes nouvelles sont ignorées, avec un avertissement. Toute autre
+    différence de colonnes est refusée.
     """
 
     def __init__(self, path: str | Path) -> None:
@@ -20,6 +27,8 @@ class ResultStore:
         self._fh: IO[str] | None = None
         self._writer: csv.DictWriter[str] | None = None
         self._fields: list[str] | None = None
+        self.legacy = False
+        """Vrai si le fichier existant a un en-tête plus ancien (colonnes en moins)."""
 
     def _repair(self) -> None:
         if not self.path.exists():
@@ -53,9 +62,11 @@ class ResultStore:
     def append(self, row: dict[str, Any]) -> None:
         if self._writer is None:
             self._open(list(row))
-        assert self._writer is not None and self._fh is not None
+        assert self._writer is not None and self._fh is not None and self._fields is not None
         if list(row) != self._fields:
-            raise ValueError("colonnes incompatibles avec le fichier de résultats existant")
+            if not (self.legacy and set(self._fields) <= set(row)):
+                raise ValueError("colonnes incompatibles avec le fichier de résultats existant")
+            row = {k: row[k] for k in self._fields}
         self._writer.writerow(row)
         self._fh.flush()
 
@@ -63,9 +74,20 @@ class ResultStore:
         self._repair()
         existing = self.header()
         if existing is not None and existing != fields:
-            raise ValueError(
-                f"{self.path} existe avec d'autres colonnes ; choisissez un autre dossier de sortie"
+            if not set(existing) < set(fields):
+                raise ValueError(
+                    f"{self.path} existe avec d'autres colonnes ; "
+                    "choisissez un autre dossier de sortie"
+                )
+            warnings.warn(
+                f"{self.path} : en-tête d'une version antérieure ; "
+                f"{len(set(fields) - set(existing))} colonne(s) nouvelle(s) ignorée(s) "
+                "pour cette reprise",
+                UserWarning,
+                stacklevel=3,
             )
+            fields = existing
+            self.legacy = True
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._fh = self.path.open("a", newline="", encoding="utf-8")
         self._writer = csv.DictWriter(self._fh, fieldnames=fields)

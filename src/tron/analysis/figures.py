@@ -328,6 +328,65 @@ def cost_vs_depth(
     return _save(fig, out)
 
 
+METRIC_LABELS = {
+    "cooperation_proxy_mean": "Indice de coopération (proxy, 0 à 1)",
+    "intra_team_distance_mean_mean": "Distance moyenne entre coéquipiers (cases)",
+    "team_survival_plies_mean": "Survie de l'équipe (demi-coups)",
+    "territory_share_mean_mean": "Part de territoire de l'équipe",
+    "collective_vs_individual_gap_mean": "Écart collectif / individuel (0 à 1)",
+    "win_rate": "Taux de victoire",
+}
+
+
+def metric_vs_factor(
+    summary: pd.DataFrame,
+    out: str | Path,
+    metric: str = "cooperation_proxy_mean",
+    x: str = "f_k",
+    series: str = "team",
+    title: str | None = None,
+) -> Path:
+    """Moyenne d'une métrique selon un facteur, une courbe par niveau de ``series``.
+
+    Les niveaux de ``x`` sont placés à intervalles réguliers dans leur ordre
+    naturel (numérique si possible), ce qui accepte aussi les grilles ``[l, h]``.
+    """
+    plt = _plt()
+    data = summary[summary[metric].notna()]
+    xs = sorted(data[x].unique(), key=_sort_key)
+    pos = {v: i for i, v in enumerate(xs)}
+    levels = sorted(data[series].unique(), key=_sort_key)
+    colors = _colors(levels)
+    fig, ax = plt.subplots(figsize=(5.4, 3.9))
+    for lv in levels:
+        s = data[data[series] == lv].groupby(x, as_index=False)[metric].mean()
+        s = s.assign(_pos=s[x].map(pos)).sort_values("_pos")
+        ax.plot(
+            s["_pos"],
+            s[metric],
+            color=colors[lv],
+            linewidth=2 * PX * 1.5,
+            marker="o",
+            markersize=8 * PX * 1.4,
+            markeredgecolor=SURFACE_LIGHT,
+            markeredgewidth=2 * PX,
+            label=str(lv) if series == "team" else level_text(series, lv),
+        )
+    ax.set_xticks(range(len(xs)), [level_text(x, v).split(" = ")[-1] for v in xs])
+    ax.set_xlabel(label(x))
+    ax.set_ylabel(METRIC_LABELS.get(metric, metric))
+    _style(ax)
+    handles, labels_ = ax.get_legend_handles_labels()
+    _header(
+        fig,
+        title or f"{METRIC_LABELS.get(metric, metric)} selon {label(x).lower()}",
+        handles,
+        labels_,
+        width_in=fig.get_size_inches()[0],
+    )
+    return _save(fig, out)
+
+
 def _sort_key(value: Any) -> tuple[int, float, str]:
     if isinstance(value, int | float) and not (isinstance(value, float) and math.isnan(value)):
         return (0, float(value), "")

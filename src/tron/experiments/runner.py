@@ -26,7 +26,7 @@ from tron.experiments.plan import Plan, Task
 from tron.experiments.store import ResultStore
 from tron.sim.match import Match, MatchObserver, ensure_warmup
 from tron.sim.recorder import Recorder
-from tron.sim.result import environment_info
+from tron.sim.result import METRICS_VERSION, environment_info
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,7 +49,7 @@ def run_task(task: Task, log_dir: str | None = None) -> dict[str, Any]:
     if log_dir is not None:
         name = f"c{task.cond_index:04d}_g{task.game:04d}.jsonl"
         observers.append(Recorder(Path(log_dir) / name))
-    result = Match(task.game_config(), observers=observers).run()
+    result = Match(task.game_config(), observers=observers, metrics=task.metrics).run()
     row: dict[str, Any] = {
         "plan": task.plan,
         "condition": task.condition,
@@ -117,6 +117,7 @@ def run_plan(
     manifest = {
         "plan": plan.to_dict(),
         "environment": environment_info(),
+        "metrics_version": METRICS_VERSION if plan.metrics else None,
         "started": datetime.now(UTC).isoformat(timespec="seconds"),
         "tasks_total": len(tasks),
         "tasks_already_done": already,
