@@ -137,7 +137,7 @@ class MCTSAgent(Agent):
         return u / node.visits
 
     def _init_node(self, node: _Node, st: GameState, rnd: random.Random) -> None:
-        if st.teams_alive <= 1:
+        if st.over:
             node.terminal = True
             return
         node.player = st.current
@@ -185,7 +185,7 @@ class MCTSAgent(Agent):
         steps = 0
         greedy = self.rollout_policy == "greedy"
         try:
-            while st.teams_alive > 1 and steps < self.rollout_depth:
+            while not st.over and steps < self.rollout_depth:
                 moves = st.legal_moves()
                 if not moves:
                     st.apply(PASS)

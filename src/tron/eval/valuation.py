@@ -39,12 +39,12 @@ class Valuation:
     def __init__(self, config: GameConfig, heuristic: Heuristic) -> None:
         n = config.n_players
         self.n = n
-        self.team = list(config.team_index)
+        self.team = list(config.victory_team_index)  # équipes qui gagnent (P09)
         self.heuristic = heuristic
         self.mu = WIN_BONUS
         self.cap = PLY_CAP
         self.eps = min(self.mu / (4 * n * self.cap), 1.0 / (4 * config.width * config.height))
-        max_team = max(config.team_sizes)
+        max_team = max(self.team.count(t) for t in set(self.team))
         self.max_component = 1.0 + self.mu
         self.pair_bound_diff = 1.0 + self.mu + self.eps
         self.pair_bound_same = 2.0 * (1.0 + self.mu)
@@ -68,20 +68,22 @@ class Valuation:
         """Vecteur v de l'état ``state`` vu d'une recherche lancée au demi-coup ``root_ply``."""
         n = self.n
         d = state._d
-        if state.teams_alive <= 1:
+        if state.over:
             winner = state.winning_team()
-            win = self.win_value(state.ply - root_ply)
-            team = self.team
-            return [
-                win if team[p] == winner else self.dead_value(d[p] - root_ply) for p in range(n)
-            ]
+            if winner >= 0:
+                win = self.win_value(state.ply - root_ply)
+                team = self.team
+                return [
+                    win if team[p] == winner else self.dead_value(d[p] - root_ply) for p in range(n)
+                ]
+            # Égalité (P09) : les vivants se partagent la valeur comme sur une feuille.
         h = self.heuristic.shares(state)
         a = state._a
         return [h[p] if a[p] else self.dead_value(d[p] - root_ply) for p in range(n)]
 
     def scalar(self, state: GameState, root_ply: int, coeffs: Sequence[tuple[int, float]]) -> float:
         """Combinaison linéaire Σ c_j·v(j) ; évite l'heuristique si le camp est éliminé."""
-        if state.teams_alive > 1 and not any(state._a[j] for j, _ in coeffs):
+        if not state.over and not any(state._a[j] for j, _ in coeffs):
             d = state._d
             return sum(w * self.dead_value(d[j] - root_ply) for j, w in coeffs)
         v = self.vector(state, root_ply)

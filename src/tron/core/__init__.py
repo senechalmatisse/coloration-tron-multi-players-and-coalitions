@@ -10,6 +10,7 @@ from tron.core.config import (
 )
 from tron.core.directions import DIRECTIONS, EAST, NAMES, NORTH, PASS, SOUTH, WEST
 from tron.core.rng import derive_seed, make_rng
+from tron.core.rules import MODES, RulesError, RulesSpec
 from tron.core.state import BORDER, FREE, GameState, Outcome
 
 __all__ = [
@@ -17,6 +18,7 @@ __all__ = [
     "DIRECTIONS",
     "EAST",
     "FREE",
+    "MODES",
     "NAMES",
     "NORTH",
     "PASS",
@@ -30,6 +32,8 @@ __all__ = [
     "Outcome",
     "PlacementSpec",
     "PlayerSpec",
+    "RulesError",
+    "RulesSpec",
     "derive_seed",
     "make_rng",
 ]

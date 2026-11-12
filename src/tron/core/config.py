@@ -32,6 +32,8 @@ from typing import Any
 
 import yaml
 
+from tron.core.rules import RulesError, RulesSpec, parse_rules
+
 MIN_SIZE, MAX_SIZE = 5, 100
 MIN_PLAYERS, MAX_PLAYERS = 2, 8
 PLACEMENT_MODES = ("regular", "random", "manual")
@@ -50,6 +52,7 @@ _CONFIG_KEYS = frozenset(
         "players",
         "defaults",
         "diplomacy",
+        "rules",
     }
 )
 _DIPLOMACY_KEYS = frozenset(
@@ -182,6 +185,7 @@ class GameConfig:
     first_player: int = 0
     name: str = "partie"
     diplomacy: DiplomacySpec = field(default_factory=DiplomacySpec)
+    rules: RulesSpec = field(default_factory=RulesSpec)
 
     def __post_init__(self) -> None:
         self._validate()
@@ -209,6 +213,20 @@ class GameConfig:
     def team_sizes(self) -> tuple[int, ...]:
         idx = self.team_index
         return tuple(idx.count(t) for t in range(len(self.team_names)))
+
+    @property
+    def victory_team_index(self) -> tuple[int, ...]:
+        """Équipe de victoire de chaque joueur (P09) : chaque joueur seul en survie individuelle."""
+        if self.rules.individual:
+            return tuple(range(self.n_players))
+        return self.team_index
+
+    @property
+    def victory_names(self) -> tuple[str, ...]:
+        """Nom de chaque équipe de victoire (noms des joueurs en survie individuelle)."""
+        if self.rules.individual:
+            return tuple(p.name for p in self.players)
+        return self.team_names
 
     def teammates(self, player: int) -> tuple[int, ...]:
         """Coéquipiers du joueur (lui exclu)."""
@@ -256,6 +274,10 @@ class GameConfig:
                 if not (0 <= x < w and 0 <= y < h):
                     raise ConfigError(f"position hors grille : ({x}, {y})")
         self.diplomacy.validate()
+        try:
+            self.rules.validate()
+        except RulesError as exc:
+            raise ConfigError(str(exc)) from exc
 
     # -------------------------------------------------------- sérialisation
     def to_dict(self) -> dict[str, Any]:
@@ -270,6 +292,8 @@ class GameConfig:
         }
         if self.diplomacy != DiplomacySpec():  # clé omise par défaut : format historique
             data["diplomacy"] = self.diplomacy.to_dict()
+        if self.rules != RulesSpec():
+            data["rules"] = self.rules.to_dict()
         return data
 
     @classmethod
@@ -295,6 +319,7 @@ class GameConfig:
             first_player=int(data.get("first_player", 0)),
             name=str(data.get("name", "partie")),
             diplomacy=_parse_diplomacy(data.get("diplomacy")),
+            rules=_parse_rules(data.get("rules")),
         )
 
     @classmethod
@@ -395,6 +420,13 @@ def _parse_diplomacy(raw: Any) -> DiplomacySpec:
         if isinstance(exc, ConfigError):
             raise
         raise ConfigError(f"diplomatie invalide : {exc}") from exc
+
+
+def _parse_rules(raw: Any) -> RulesSpec:
+    try:
+        return parse_rules(raw)
+    except (RulesError, TypeError, ValueError) as exc:
+        raise ConfigError(str(exc)) from exc
 
 
 def _strict_bool(value: Any, name: str) -> bool:

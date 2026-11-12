@@ -1,0 +1,15 @@
+# Mode survie (P09.1) : chaque joueur est classe selon sa duree de survie.
+# victory_scope: individual -> la partie continue tant que deux joueurs vivent,
+# coequipiers compris ; le dernier survivant gagne (resultat individuel explicite).
+# Les equipes restent celles des preferences sociales (profil team).
+name: survival_individual
+grid: 12
+seed: 9
+placement: {mode: regular, rotate: true}
+heuristic: {name: voronoi, tie: order}
+rules: {mode: survival, victory_scope: individual}
+players:
+  - {name: a1, team: A, agent: social, depth: 2, profile: team, alpha: 0.5}
+  - {name: b1, team: B, agent: maxn, depth: 2}
+  - {name: a2, team: A, agent: social, depth: 2, profile: team, alpha: 0.5}
+  - {name: b2, team: B, agent: greedy}

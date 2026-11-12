@@ -199,7 +199,7 @@ def _ab(ctx: _Ctx, depth: int, ply: int, alpha: float, beta: float) -> float:
     if ctx.nodes % _CHECK_EVERY == 0:
         _check_time(ctx)
     st = ctx.st
-    if depth == 0 or st.teams_alive <= 1 or (ctx.camp is not None and not _any_alive(st, ctx.camp)):
+    if depth == 0 or st.over or (ctx.camp is not None and not _any_alive(st, ctx.camp)):
         ctx.leaves += 1
         ctx.pv[ply] = []
         return ctx.val.scalar(st, ctx.root_ply, ctx.coeffs)
@@ -254,7 +254,7 @@ def _ab_full(ctx: _Ctx, depth: int, ply: int) -> float:
     """Minimax à deux camps sans élagage (référence des tests)."""
     ctx.nodes += 1
     st = ctx.st
-    if depth == 0 or st.teams_alive <= 1 or (ctx.camp is not None and not _any_alive(st, ctx.camp)):
+    if depth == 0 or st.over or (ctx.camp is not None and not _any_alive(st, ctx.camp)):
         ctx.leaves += 1
         ctx.pv[ply] = []
         return ctx.val.scalar(st, ctx.root_ply, ctx.coeffs)
@@ -302,7 +302,7 @@ def _mx(ctx: _Ctx, depth: int, ply: int, q: int, x: float) -> list[float]:
     if ctx.nodes % _CHECK_EVERY == 0:
         _check_time(ctx)
     st = ctx.st
-    if depth == 0 or st.teams_alive <= 1:
+    if depth == 0 or st.over:
         ctx.leaves += 1
         ctx.pv[ply] = []
         return ctx.val.vector(st, ctx.root_ply)
@@ -371,7 +371,7 @@ def _nm(ctx: _Ctx, depth: int, ply: int, alpha: float, beta: float) -> float:
     if ctx.nodes % _CHECK_EVERY == 0:
         _check_time(ctx)
     st = ctx.st
-    if depth == 0 or st.teams_alive <= 1:
+    if depth == 0 or st.over:
         ctx.leaves += 1
         ctx.pv[ply] = []
         vec = ctx.val.vector(st, ctx.root_ply)

@@ -495,7 +495,12 @@ class PlaybackController:
                 )
             )
         if out is not None:
-            status = f"Victoire de l'équipe {cfg.team_names[out.winning_team]}"
+            if out.winning_team < 0:
+                status = "Égalité"
+            elif cfg.rules.individual:
+                status = f"Victoire de {cfg.victory_names[out.winning_team]} (survie individuelle)"
+            else:
+                status = f"Victoire de l'équipe {cfg.team_names[out.winning_team]}"
         elif self.paused:
             status = "Pause"
         else:

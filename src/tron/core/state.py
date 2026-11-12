@@ -65,6 +65,7 @@ class GameState:
         "n_moves",
         "n_teams",
         "offsets",
+        "over",
         "ply",
         "positions",
         "size",
@@ -104,12 +105,13 @@ class GameState:
         self.offsets = np.array([-stride, 1, stride, -1], dtype=np.int64)
         self._off = (-stride, 1, stride, -1)
         self._bind_views()
-        team = list(config.team_index)
+        team = list(config.victory_team_index)
         self._team = team
         self.team = np.asarray(team, dtype=np.int64)
-        self.n_teams = len(config.team_names)
+        self.n_teams = len(set(team))
         self.team_alive = [team.count(t) for t in range(self.n_teams)]
         self.teams_alive = self.n_teams
+        self.over = self.teams_alive <= 1
         if positions is None:
             positions = initial_positions(config)
         if len(positions) != n:
@@ -232,6 +234,7 @@ class GameState:
         self.current = nxt
         self.key = key ^ z.turn[p] ^ z.turn[nxt]
         self._hist.append((p, h, t, prev_key))
+        self.over = self.teams_alive <= 1
         return t >= 0
 
     def undo(self) -> None:
@@ -252,6 +255,7 @@ class GameState:
         self.ply -= 1
         self.current = p
         self.key = prev_key
+        self.over = self.teams_alive <= 1
 
     def _next_alive(self, p: int) -> int:
         a = self._a
@@ -266,8 +270,12 @@ class GameState:
         return p
 
     def is_terminal(self) -> bool:
-        """Vrai quand il ne reste qu'une équipe en vie (F1.5)."""
-        return self.teams_alive <= 1
+        """Vrai quand la partie est finie : une seule équipe de victoire en vie (F1.5, P09).
+
+        L'indicateur ``over`` est tenu à jour par ``apply`` et ``undo`` ; les moteurs
+        de recherche le lisent directement.
+        """
+        return self.over
 
     def winning_team(self) -> int:
         """Indice de l'équipe gagnante, ou −1 si la partie n'est pas finie."""
@@ -321,6 +329,7 @@ class GameState:
             "ply",
             "n_moves",
             "teams_alive",
+            "over",
         ):
             setattr(new, name, getattr(self, name))
         new.grid = self.grid.copy()
@@ -469,6 +478,7 @@ class GameState:
             state.teams_alive = sum(1 for c in counts if c > 0)
             if state.teams_alive != int(data["teams_alive"]):
                 raise ValueError("nombre d'équipes vivantes incohérent")
+            state.over = state.teams_alive <= 1
             if not 0 <= state.current < n or (state.teams_alive > 1 and not alive[state.current]):
                 raise ValueError("joueur au trait invalide")
             state._hist = [

@@ -226,7 +226,17 @@ class Match:
         out = self.state.outcome()
         assert out is not None
         cfg = self.config
-        names = cfg.team_names
+        st = self.state
+        n = cfg.n_players
+        if out.winning_team < 0:  # égalité (P09)
+            winning_team, individual = "", None
+        elif cfg.rules.individual:  # équipe de victoire = joueur
+            winning_team, individual = cfg.players[out.winning_team].team, out.winning_team
+        else:
+            winning_team = cfg.team_names[out.winning_team]
+            individual = out.winners[0] if len(out.winners) == 1 else None
+        survival = [st.ply if st.is_alive(p) else int(st.death_ply[p]) for p in range(n)]
+        order = tuple(sorted(range(n), key=lambda p: (-survival[p], p)))
         totals = tuple(
             PlayerTotals(
                 decisions=self._decisions[i],
@@ -248,7 +258,7 @@ class Match:
             teams=tuple(p.team for p in cfg.players),
             agents=tuple(a.describe() for a in self.agents),
             depths=tuple(p.depth for p in cfg.players),
-            winning_team=names[out.winning_team] if out.winning_team >= 0 else "",
+            winning_team=winning_team,
             winners=out.winners,
             ranks=out.ranks,
             elimination_order=out.elimination_order,
@@ -258,6 +268,9 @@ class Match:
             totals=totals,
             positions=self.state.positions,
             metrics=self._final_metrics(),
+            mode=cfg.rules.mode,
+            individual_winner=individual,
+            survival_order=order,
         )
         for obs in self.observers:
             obs.on_end(self, self.result)

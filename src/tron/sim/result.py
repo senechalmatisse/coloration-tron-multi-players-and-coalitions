@@ -146,6 +146,12 @@ class MatchResult:
     totals: tuple[PlayerTotals, ...]
     positions: tuple[tuple[int, int], ...]
     metrics: MatchMetrics | None = None
+    mode: str = "classic"
+    """Mode de jeu (P09)."""
+    individual_winner: int | None = None
+    """Vainqueur individuel : dernier survivant en survie individuelle, ou seul survivant."""
+    survival_order: tuple[int, ...] = ()
+    """Joueurs du plus long au plus court temps de survie (à égalité, ordre des indices)."""
 
     @property
     def n_players(self) -> int:
@@ -196,6 +202,9 @@ class MatchResult:
             row[f"leaves_p{i}"] = tot.leaves if tot else ""
             row[f"meandepth_p{i}"] = round(tot.mean_depth, 4) if tot else ""
         row.update(metrics_row(self.metrics, max_players))
+        row["rules_mode"] = self.mode
+        row["individual_winner"] = "" if self.individual_winner is None else self.individual_winner
+        row["survival_order"] = ";".join(str(p) for p in self.survival_order)
         return row
 
 
