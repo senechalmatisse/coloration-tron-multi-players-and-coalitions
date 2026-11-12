@@ -31,7 +31,7 @@ En survie individuelle, `Valuation` n'accorde la valeur de victoire qu'au surviv
 
 Exemple : `tron play configs/games/survival_individual_12x12.yaml --no-gui`.
 
-Colonnes CSV ajoutées pour tous les modes : `rules_mode`, `individual_winner`, `survival_order`.
+Colonnes CSV ajoutées pour tous les modes : `rules_mode`, `individual_winner`, `survival_order`, puis `rounds` (tours complets, comptés seulement si les règles ont un état propre : zones ou obstacles), `team_scores` (contrôle de zone) et `obstacles` (§ 3).
 
 ## 2. Contrôle de zone (`zone_control`)
 
@@ -56,9 +56,9 @@ rules:
 
 En cas d'égalité au score, la seule équipe encore en vie parmi les meilleures gagne ; sinon la partie est nulle (`winning_team = -1`, `winners` vide). Les rangs (`ranks`) restent des rangs de survie ; le classement au score se lit dans `team_scores`.
 
-**Validation.** Erreur explicite si aucune zone n'est donnée, si `target_score` et `max_rounds` manquent tous les deux, si une zone sort de la grille ou est vide, si `zone_rule` n'est pas `head`, si un compteur dépasse 255, ou si ces clés apparaissent dans un autre mode.
+**Validation.** Erreur explicite si aucune zone n'est donnée, si `target_score` et `max_rounds` manquent tous les deux, si une zone sort de la grille ou est vide, si `zone_rule` n'est pas `head`, si une valeur n'est pas un entier (booléens, décimaux et chaînes refusés) ou est < 1, ou si ces clés apparaissent dans un autre mode. Les compteurs (tours, scores) ne sont pas bornés.
 
-**Moteur.** Le tour et les scores font partie de l'état : `apply` les met à jour, `undo` les restaure exactement, et la clé Zobrist les inclut (tables `rounds` et `score`, tirées après les tables historiques : les clés des parties classiques ne changent pas). Les moteurs de recherche ne contiennent aucune règle de zone : ils lisent `GameState.over` et `Valuation`.
+**Moteur.** Le tour et les scores font partie de l'état : `apply` les met à jour, `undo` les restaure exactement, et la clé Zobrist les inclut (valeurs calculées par `ZobristTables.round_key` et `score_key`, hachage déterministe sans borne ; les clés des parties classiques ne changent pas, ce que vérifie un test de non-régression). Les moteurs de recherche ne contiennent aucune règle de zone : ils lisent `GameState.over` et `Valuation`.
 
 **Heuristique `zone`.** Pour chaque joueur vivant : part de Voronoi (`territory`), proximité moyenne des zones 1 / (1 + distance de Manhattan) (`proximity`) et avance de son équipe au score (`score`). Poids par défaut 0,5 / 0,3 / 0,2, validés et normalisés. Les parts respectent le contrat de `Valuation` (finies, positives, 0 pour un éliminé, somme 1). Hors du mode `zone_control`, l'heuristique vaut Voronoi. Coût mesuré (Python pur, 16×16, 4 joueurs, 60 positions) : environ 121 µs par évaluation, contre 111 µs pour Voronoi.
 
@@ -73,3 +73,32 @@ tron play configs/games/zone_control_16x16.yaml --no-gui --games 12 --out result
 ```
 
 Sur 12 parties (graine 13) : 7 victoires de A, 5 de B, 11 parties décidées au score cible.
+
+## 3. Obstacles dynamiques (clé `obstacles`)
+
+```yaml
+rules:
+  mode: classic                # combinable avec tous les modes
+  obstacles: {every: 3, count: 4, start: 3, max: 48, margin: 1}
+```
+
+| Clé | Défaut | Rôle |
+|---|---|---|
+| `every` | obligatoire | intervalle, en tours complets, entre deux apparitions |
+| `count` | 1 | obstacles posés à chaque apparition |
+| `start` | `every` | tour complet de la première apparition |
+| `max` | aucun | nombre total maximal d'obstacles |
+| `margin` | 1 | distance de Manhattan minimale + 1 aux têtes vivantes (0 : toute case libre) |
+
+**Calendrier.** À la fin des tours complets `start`, `start + every`, `start + 2·every`…, `count` obstacles apparaissent (moins si `max` est atteint ou s'il n'y a plus assez de cases admissibles). Aucun obstacle n'apparaît une fois la partie finie.
+
+**Placement.** Un obstacle n'apparaît que sur une case libre : jamais sur une tête, un mur ou un autre obstacle, ni à distance ≤ `margin` d'une tête vivante. Les cases candidates sont tirées par un hachage déterministe (`tron.core.rng.hash_index`, flux `STREAM_OBSTACLES`) de la graine de la partie, du numéro de tour et d'un compteur ; si la grille est trop encombrée pour que ces tirages suffisent, toutes les cases admissibles sont parcourues dans un ordre haché. La même position donne donc toujours les mêmes obstacles : la recherche les anticipe (règle connue de tous les agents), et une autre graine donne d'autres obstacles.
+
+**Moteur.** Un obstacle est une case de valeur `OBSTACLE` (−3), traitée comme un mur par `legal_moves`, Voronoi, l'heuristique composite et les déroulements MCTS. Les cases posées font partie du jeton d'annulation de la fin de tour : `undo` les libère exactement. La clé Zobrist les inclut (table `obst`, tirée après les tables historiques), de même que `copy`, les instantanés (caractère `/`, cohérence vérifiée avec l'historique et avec `max`) et la carte ASCII (`#`). Les tables de transposition restent exactes : sur 48 positions avec obstacles, Paranoid et MaxN à profondeur 4 jouent les mêmes coups avec et sans table.
+
+**Coût mesuré** (Python pur, 14×14, 4 joueurs, 60 demi-coups aléatoires puis retour) : 2,7 µs par paire `apply` + `undo` en mode classique, 5,0 µs avec obstacles (dont le suivi des tours) ; c'est négligeable devant une évaluation heuristique (≈ 100 µs).
+
+**Sorties.** Dans le journal, le coup qui termine un tour avec apparition porte `"obstacles": [[x, y], ...]` ; au rejeu, ces cases sont recalculées et comparées au journal (`LogError` en cas d'écart). Colonne CSV `obstacles` (total posé). Les obstacles sont gris (couleur `muted` de la palette) dans la fenêtre Arcade et les exports d'images.
+
+Exemple : `tron play configs/games/obstacles_14x14.yaml --no-gui --games 8 --out results/obstacles`.
+

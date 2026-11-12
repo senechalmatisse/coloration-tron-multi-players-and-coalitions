@@ -1,8 +1,9 @@
 """État du jeu et règles (F1.1 à F1.5, F1.8).
 
 Représentation (§6.3) : grille aplatie ``int8`` de taille (H+2) × (W+2) avec une
-bordure sentinelle (−2), −1 pour une case libre et ``i`` pour un mur du joueur i
-(la tête comprise). La case (x, y) a l'indice ``(y+1)·(W+2) + (x+1)`` ; nord = y − 1.
+bordure sentinelle (−2), −1 pour une case libre, ``i`` pour un mur du joueur i
+(la tête comprise) et −3 pour un obstacle dynamique (P09.3). La case (x, y) a
+l'indice ``(y+1)·(W+2) + (x+1)`` ; nord = y − 1.
 
 ``apply`` et ``undo`` modifient l'état en place, sans copie : un historique
 permet de défaire les coups, et la clé de Zobrist ainsi que les compteurs
@@ -21,7 +22,7 @@ import numpy as np
 
 from tron.core.config import GameConfig
 from tron.core.placement import initial_positions
-from tron.core.rules import RulesEngine, make_engine
+from tron.core.rules import OBSTACLE, RulesEngine, RulesToken, make_engine
 from tron.core.zobrist import ZobristTables, zobrist_tables
 
 FREE = -1
@@ -66,6 +67,7 @@ class GameState:
         "key",
         "n",
         "n_moves",
+        "n_obstacles",
         "n_teams",
         "offsets",
         "over",
@@ -144,11 +146,14 @@ class GameState:
         self.n_moves = 0
         self.elim_order: list[int] = []
         self._hist: list[tuple[int, int, int, int]] = []
-        # Règles (P09) : tours complets et scores par équipe de victoire.
+        # Règles (P09) : tours complets, scores par équipe de victoire, obstacles.
         self.round = 0
         self.scores = [0] * self.n_teams
-        self._rules: RulesEngine | None = make_engine(config.rules, cur, tuple(team))
-        self._rhist: list[Any] = []
+        self.n_obstacles = 0
+        self._rules: RulesEngine | None = make_engine(
+            config.rules, cur, tuple(team), config.seed, w, h
+        )
+        self._rhist: list[RulesToken] = []
         if self._rules is not None:
             self.key ^= self._rules.key_part(self)
 
@@ -334,6 +339,12 @@ class GameState:
             n_plies=self.ply,
         )
 
+    def last_obstacles(self) -> list[tuple[int, int]]:
+        """Cases (x, y) des obstacles posés par le dernier demi-coup (P09.3)."""
+        if not self._rhist or self._rhist[-1] is None:
+            return []
+        return [self.coords(c) for c in self._rhist[-1][1]]
+
     # ---------------------------------------------------------------- outils
     def copy(self, history: bool = True) -> GameState:
         """Copie indépendante ; sans ``history``, les coups antérieurs ne peuvent être défaits."""
@@ -360,6 +371,7 @@ class GameState:
             "teams_alive",
             "over",
             "round",
+            "n_obstacles",
         ):
             setattr(new, name, getattr(self, name))
         new.scores = list(self.scores)
@@ -378,9 +390,13 @@ class GameState:
         """Recalcule la clé de Zobrist à partir de zéro (contrôle de cohérence)."""
         z = self._z
         key = 0
+        g = self._g
         for c in range(self.size):
-            if self._g[c] >= 0:
+            v = g[c]
+            if v >= 0:
                 key ^= z.occ[c]
+            elif v == OBSTACLE:
+                key ^= z.obst[c]
         for p in range(self.n):
             if self._a[p]:
                 key ^= z.head[p][self._h[p]] ^ z.alive[p]
@@ -393,7 +409,7 @@ class GameState:
         return self.grid.reshape(self.height + 2, self.stride)[1:-1, 1:-1]
 
     def to_text(self) -> str:
-        """Représentation ASCII : ``.`` libre, ``a``… murs, ``A``… têtes, ``x`` tête éliminée."""
+        """ASCII : ``.`` libre, ``a``… murs, ``A``… têtes, ``x`` tête éliminée, ``#`` obstacle."""
         heads = {self._h[p]: p for p in range(self.n)}
         rows = []
         for y in range(self.height):
@@ -403,6 +419,8 @@ class GameState:
                 v = self._g[c]
                 if v == FREE:
                     row.append(".")
+                elif v == OBSTACLE:
+                    row.append("#")
                 elif heads.get(c) == v:
                     row.append(chr(ord("A") + v) if self._a[v] else "x")
                 else:
@@ -412,7 +430,7 @@ class GameState:
 
     @classmethod
     def from_text(cls, config: GameConfig, text: str, current: int | None = None) -> GameState:
-        """Construit un état à partir d'une carte ASCII (têtes ``A``…, murs ``a``…)."""
+        """Construit un état à partir d'une carte ASCII (têtes ``A``…, murs ``a``…, ``#``)."""
         lines = [ln.strip() for ln in text.strip().splitlines()]
         if len(lines) != config.height or any(len(ln) != config.width for ln in lines):
             raise ValueError("dimensions de la carte incompatibles avec la configuration")
@@ -427,6 +445,9 @@ class GameState:
             for x, ch in enumerate(ln):
                 if "a" <= ch <= "h":
                     state._g[state.index(x, y)] = ord(ch) - ord("a")
+                elif ch == "#":
+                    state._g[state.index(x, y)] = OBSTACLE
+                    state.n_obstacles += 1
         state.key = state.compute_key()
         return state
 
@@ -435,7 +456,7 @@ class GameState:
         """Instantané sérialisable (JSON) de tout l'état, historique ``apply``/``undo`` compris.
 
         La grille (bordure comprise) est codée sur un caractère par case :
-        ``0`` bordure, ``1`` libre, ``2`` + i mur du joueur i.
+        ``0`` bordure, ``1`` libre, ``2`` + i mur du joueur i, ``/`` obstacle.
         """
         return {
             "width": self.width,
@@ -455,7 +476,9 @@ class GameState:
             "history": [list(h) for h in self._hist],
             "round": self.round,
             "scores": list(self.scores),
-            "rules_history": [None if tok is None else list(tok) for tok in self._rhist],
+            "rules_history": [
+                None if tok is None else [list(tok[0]), list(tok[1])] for tok in self._rhist
+            ],
         }
 
     @classmethod
@@ -474,7 +497,8 @@ class GameState:
             if len(text) != state.size:
                 raise ValueError("taille de grille incohérente")
             values = [ord(ch) - 50 for ch in text]
-            if any(not BORDER <= v < config.n_players for v in values):
+            low = OBSTACLE if config.rules.obstacles is not None else BORDER
+            if any(not low <= v < config.n_players for v in values):
                 raise ValueError("valeur de case invalide dans la grille")
             g2 = np.asarray(values, dtype=np.int8).reshape(h + 2, w + 2)
             if (g2[0, :] != BORDER).any() or (g2[-1, :] != BORDER).any():
@@ -519,12 +543,17 @@ class GameState:
             state.scores = [int(x) for x in data.get("scores", [0] * state.n_teams)]
             if len(state.scores) != state.n_teams or min(state.scores, default=0) < 0:
                 raise ValueError("scores incohérents")
-            state._rhist = [
-                None if tok is None else tuple(int(x) for x in tok)
-                for tok in data.get("rules_history", [])
-            ]
+            state.n_obstacles = values.count(OBSTACLE)
+            state._rhist = [_rules_token(tok) for tok in data.get("rules_history", [])]
             if state._rules is not None and len(state._rhist) != len(data.get("history", [])):
                 raise ValueError("historique des règles incohérent")
+            obs = config.rules.obstacles
+            if obs is not None and obs.max_total is not None and state.n_obstacles > obs.max_total:
+                raise ValueError("plus d'obstacles que le maximum de la configuration")
+            if len(state._rhist) == state.ply:  # historique complet : obstacles vérifiables
+                placed = [c for tok in state._rhist if tok is not None for c in tok[1]]
+                if sorted(placed) != [c for c, v in enumerate(values) if v == OBSTACLE]:
+                    raise ValueError("obstacles incohérents avec l'historique des règles")
             rules = state._rules
             state.over = state.teams_alive <= 1 or (rules is not None and rules.decided(state))
             if not 0 <= state.current < n or (state.teams_alive > 1 and not alive[state.current]):
@@ -545,3 +574,11 @@ class GameState:
             f"GameState({self.width}x{self.height}, ply={self.ply}, "
             f"current={self.current}, alive={self.alive_players()})"
         )
+
+
+def _rules_token(raw: Any) -> RulesToken:
+    """Jeton de règles relu d'un instantané : ``None`` ou [équipes, cases d'obstacles]."""
+    if raw is None:
+        return None
+    gained, placed = raw
+    return tuple(int(t) for t in gained), tuple(int(c) for c in placed)

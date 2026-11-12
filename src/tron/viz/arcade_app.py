@@ -213,6 +213,17 @@ class TronWindow(arcade.Window if arcade is not None else object):  # type: igno
         self.cells.draw()
         st = self.controller.source.state
         half = self.cell / 2
+        for zone in st.config.rules.zones:  # contrôle de zone (P09.2)
+            x0, y0 = self._center(zone.x, zone.y)
+            x1, y1 = self._center(zone.x + zone.width - 1, zone.y + zone.height - 1)
+            arc.draw_lrbt_rectangle_outline(
+                min(x0, x1) - half,
+                max(x0, x1) + half,
+                min(y0, y1) - half,
+                max(y0, y1) + half,
+                self.palette.ink_secondary,
+                border_width=2,
+            )
         for p in range(st.n):
             x, y = st.head(p)
             cx, cy = self._center(x, y)

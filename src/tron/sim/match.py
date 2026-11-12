@@ -56,6 +56,8 @@ class MoveEvent:
     """Explication de la décision (P07), ``None`` si l'agent n'en fournit pas."""
     zone: tuple[tuple[int, int], ...] = ()
     """Changements de contrôle des zones à la fin d'un tour (zone, équipe ou −1), P09."""
+    obstacles: tuple[tuple[int, int], ...] = ()
+    """Cases (x, y) des obstacles apparus à la fin du tour terminé par ce coup (P09.3)."""
 
 
 def accepts_context(agent: Agent) -> bool:
@@ -198,6 +200,7 @@ class Match:
             diplomacy=tuple(dipl),
             details=details,
             zone=tuple(zone),
+            obstacles=tuple(st.last_obstacles()),
         )
         self.events.append(event)
         target = event.target
@@ -283,7 +286,8 @@ class Match:
             individual_winner=individual,
             survival_order=order,
             rounds=st.round,
-            scores=tuple(st.scores) if st._rules is not None else (),
+            scores=tuple(st.scores) if cfg.rules.zones else (),
+            obstacles=st.n_obstacles,
         )
         for obs in self.observers:
             obs.on_end(self, self.result)

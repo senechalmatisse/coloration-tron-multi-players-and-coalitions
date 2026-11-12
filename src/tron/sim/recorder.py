@@ -73,6 +73,8 @@ def move_record(event: MoveEvent, details: bool = True) -> dict[str, Any]:
         record["details"] = event.details.to_dict()
     if event.zone:
         record["zone"] = [list(z) for z in event.zone]
+    if event.obstacles:
+        record["obstacles"] = [list(c) for c in event.obstacles]
     return record
 
 
@@ -229,3 +231,6 @@ def apply_logged(state: GameState, record: dict[str, Any], direction: int) -> No
     moved = state.apply(direction)
     if moved == bool(record["elim"]):
         raise LogError(f"demi-coup {record['ply']} : issue incohérente avec le journal")
+    logged = [tuple(c) for c in record.get("obstacles", ())]
+    if logged != state.last_obstacles():  # obstacles rejoués de façon déterministe (P09.3)
+        raise LogError(f"demi-coup {record['ply']} : obstacles incohérents avec le journal")

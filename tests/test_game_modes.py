@@ -176,7 +176,11 @@ def _zone_cfg(**rules: object) -> GameConfig:
         {"mode": "zone_control", "zones": [[8, 8, 2, 2]], "target_score": 2},  # hors grille
         {"mode": "zone_control", "zones": [[0, 0, 0, 2]], "target_score": 2},  # zone vide
         {"mode": "zone_control", "zones": [[0, 0]], "target_score": 2, "zone_rule": "voronoi"},
-        {"mode": "zone_control", "zones": [[0, 0]], "target_score": 999},
+        {"mode": "zone_control", "zones": [[0, 0]], "target_score": 0},
+        {"mode": "zone_control", "zones": [[0, 0]], "target_score": 2.5},
+        {"mode": "zone_control", "zones": [[0, 0]], "target_score": True},
+        {"mode": "zone_control", "zones": [[0, 0]], "max_rounds": "12"},
+        {"mode": "zone_control", "zones": [[0, 0.5]], "target_score": 2},
         {"mode": "classic", "zones": [[0, 0]]},
         {"mode": "zone_control", "zones": [{"x": 0, "y": 0, "z": 1}], "target_score": 2},
     ],
@@ -357,3 +361,257 @@ def test_zone_rendering_and_panel_status() -> None:
     for _ in range(3):
         ctl.step_forward()
     assert "· tour 1 · " in ctl.panel().status
+
+
+# ------------------------------------------------------ obstacles dynamiques
+def _obst_cfg(seed: int = 4, grid: int = 9, **obstacles: object) -> GameConfig:
+    spec = {"every": 2, "count": 3, "max": 12, **obstacles}
+    return GameConfig.from_dict(
+        {
+            "grid": grid,
+            "seed": seed,
+            "placement": {"mode": "regular"},
+            "players": [
+                {"name": "a", "team": "A"},
+                {"name": "b", "team": "B"},
+                {"name": "c", "team": "A"},
+            ],
+            "rules": {"mode": "classic", "obstacles": spec},
+        }
+    )
+
+
+def _walk(st: GameState, rng: random.Random, limit: int = 400) -> list[int]:
+    moves = []
+    while not st.is_terminal() and len(moves) < limit:
+        legal = st.legal_moves()
+        d = rng.choice(legal) if legal else PASS
+        st.apply(d)
+        moves.append(d)
+    return moves
+
+
+@pytest.mark.parametrize(
+    "obstacles",
+    [
+        {"every": 0},
+        {"every": 2, "count": 0},
+        {"every": 2, "start": 0},
+        {"every": 2, "max": 0},
+        {"every": 2, "margin": -1},
+        {"every": 2, "rate": 3},
+        {"count": 2},
+        {"every": True},
+        {"every": 1.5},
+        {"every": "3"},
+        "souvent",
+    ],
+)
+def test_obstacle_rules_validation(obstacles: object) -> None:
+    with pytest.raises(ConfigError):
+        _cfg(rules={"mode": "classic", "obstacles": obstacles})
+
+
+def test_obstacle_rules_roundtrip_and_combinations() -> None:
+    cfg = _obst_cfg(start=3, margin=0)
+    assert GameConfig.from_dict(cfg.to_dict()) == cfg
+    obs = cfg.rules.obstacles
+    assert obs is not None and obs.to_dict() == {
+        "every": 2,
+        "count": 3,
+        "margin": 0,
+        "start": 3,
+        "max": 12,
+    }
+    assert [r for r in range(1, 10) if obs.is_event(r)] == [3, 5, 7, 9]
+    assert [r for r in range(1, 8) if _obst_cfg().rules.obstacles.is_event(r)] == [2, 4, 6]  # type: ignore[union-attr]
+    for mode in ({"mode": "survival", "victory_scope": "individual"}, {"mode": "survival"}):
+        combo = _cfg(rules={**mode, "obstacles": {"every": 1}})
+        assert GameConfig.from_dict(combo.to_dict()) == combo
+    zone = _zone_cfg(target_score=40)
+    combo = GameConfig.from_dict(
+        {**zone.to_dict(), "rules": {**zone.to_dict()["rules"], "obstacles": {"every": 1}}}
+    )
+    st = GameState(combo)
+    keys = [st.key]
+    _walk(st, random.Random(2))
+    assert st.n_obstacles > 0 and st.key == st.compute_key()
+    while st.ply:
+        st.undo()
+    assert st.key == keys[0] and st.n_obstacles == 0 and st.scores == [0, 0]
+
+
+def test_obstacles_are_deterministic_scheduled_and_safe() -> None:
+    from tron.core import FREE, OBSTACLE
+
+    cfg = _obst_cfg(margin=1)
+    obs = cfg.rules.obstacles
+    assert obs is not None
+    rng = random.Random(11)
+    st = GameState(cfg)
+    events: list[tuple[int, list[tuple[int, int]]]] = []
+    while not st.is_terminal():
+        before = st.grid.copy()
+        legal = st.legal_moves()
+        st.apply(rng.choice(legal) if legal else PASS)
+        placed = st.last_obstacles()
+        if placed:
+            events.append((st.round, placed))
+            assert obs.is_event(st.round) and len(placed) <= obs.count
+            heads = [st.head(p) for p in range(st.n) if st.is_alive(p)]
+            for x, y in placed:
+                assert before[st.index(x, y)] == FREE  # jamais sur une case occupee
+                assert all(abs(x - hx) + abs(y - hy) > obs.margin for hx, hy in heads)
+        assert st.n_obstacles == int((st.grid == OBSTACLE).sum()) <= 12
+    assert events and sum(len(c) for _, c in events) == st.n_obstacles
+    # Memes graine et coups : memes obstacles ; autre graine, memes coups : autres obstacles.
+    played = _played_directions(st)
+    replay = GameState(cfg)
+    other = GameState(_obst_cfg(seed=5, margin=1))
+    assert other.positions == replay.positions
+    first = []
+    for d in played:
+        replay.apply(d)
+        if replay.last_obstacles():
+            first.append((replay.round, replay.last_obstacles()))
+    assert first == events
+    for d in played[: 3 * obs.first]:  # jusqu'au premier evenement
+        other.apply(d)
+    assert other.round == obs.first and other.last_obstacles()
+    assert other.last_obstacles() != events[0][1]
+
+
+def _played_directions(st: GameState) -> list[int]:
+    """Directions jouees depuis l'etat initial, retrouvees dans l'historique."""
+    return [PASS if t < 0 else st._off.index(t - h) for _, h, t, _ in st._hist]
+
+
+def test_obstacles_apply_undo_copy_and_snapshot() -> None:
+    from tron.core import OBSTACLE
+
+    cfg = _obst_cfg(every=1, count=2, max=None, margin=0)
+    st = GameState(cfg)
+    rng = random.Random(4)
+    grids = [st.grid.copy()]
+    keys = [st.key]
+    while not st.is_terminal():
+        legal = st.legal_moves()
+        st.apply(rng.choice(legal) if legal else PASS)
+        assert st.key == st.compute_key()
+        grids.append(st.grid.copy())
+        keys.append(st.key)
+        back = GameState.from_snapshot(cfg, st.to_snapshot())
+        assert (back.grid == st.grid).all() and back.n_obstacles == st.n_obstacles
+        assert back.key == st.key and back.last_obstacles() == st.last_obstacles()
+    assert "#" in st.to_text() and "/" in st.to_snapshot()["grid"]
+    cp = st.copy()
+    cp.undo()
+    assert st.key == keys[-1] and (st.grid == grids[-1]).all()
+    while st.ply:
+        st.undo()
+        assert st.key == keys[st.ply] and (st.grid == grids[st.ply]).all()
+    assert st.n_obstacles == 0 and not (st.grid == OBSTACLE).any()
+    # Instantanes incoherents : obstacle sans regle, obstacle absent de l'historique.
+    st2 = GameState(cfg)
+    _walk(st2, random.Random(4), limit=12)
+    assert all(st2.is_alive(p) for p in range(3)) and st2.n_obstacles > 0
+    text_state = GameState.from_text(cfg, st2.to_text(), current=st2.current)
+    assert text_state.n_obstacles == st2.n_obstacles
+    assert (text_state.grid == st2.grid).all()  # carte ASCII : grille seule (tour 0)
+    assert text_state.key == text_state.compute_key()
+    snap = st2.to_snapshot()
+    with pytest.raises(ValueError, match="valeur de case"):
+        GameState.from_snapshot(_cfg(n=3), {**snap, "positions": snap["positions"]})
+    cell = snap["grid"].index("1")
+    tampered = snap["grid"][:cell] + "/" + snap["grid"][cell + 1 :]
+    with pytest.raises(ValueError):
+        GameState.from_snapshot(cfg, {**snap, "grid": tampered})
+
+
+def test_obstacles_can_decide_the_game() -> None:
+    cfg = GameConfig.from_dict(
+        {
+            "grid": 5,
+            "seed": 1,
+            "placement": {"positions": [[0, 0], [4, 4]]},
+            "players": [{"name": "a", "team": "A"}, {"name": "b", "team": "B"}],
+            "rules": {"obstacles": {"every": 1, "count": 25, "margin": 0}},
+        }
+    )
+    st = GameState(cfg)
+    st.apply(1)  # a -> (1, 0)
+    st.apply(3)  # b -> (3, 4) : fin du tour 1, toutes les cases libres sont bloquees
+    assert st.n_obstacles == 21 and not st.legal_moves()
+    st.apply(PASS)
+    out = st.outcome()
+    assert st.is_terminal() and out is not None and out.winning_team == 1
+    assert st.last_obstacles() == []  # partie finie : plus d'obstacles
+    st.undo()
+    st.undo()
+    assert st.n_obstacles == 0 and st.legal_moves()
+
+
+def test_obstacles_match_log_replay_and_checkpoint(tmp_path: Path) -> None:
+    import json
+
+    from tron.sim import GameLog, LogError, Recorder
+
+    cfg = GameConfig.from_yaml(CONFIGS / "games" / "obstacles_14x14.yaml")
+    light = GameConfig.from_dict(
+        {
+            **cfg.to_dict(),
+            "players": [
+                {"name": "a1", "team": "A", "agent": "paranoid", "depth": 2},
+                {"name": "b1", "team": "B", "agent": "greedy"},
+                {"name": "a2", "team": "A", "agent": "social", "depth": 2, "profile": "team"},
+                {"name": "b2", "team": "B", "agent": "mcts", "simulations": 40},
+            ],
+        }
+    )
+    path = tmp_path / "o.jsonl"
+    result = Match(light, observers=[Recorder(path)]).run()
+    log = GameLog.load(path)
+    assert result.obstacles > 0 and result.to_row()["obstacles"] == result.obstacles
+    assert result.to_row()["team_scores"] == ""
+    logged = [c for m in log.moves for c in m.get("obstacles", ())]
+    assert len(logged) == result.obstacles
+    final = log.final_state()
+    assert final.n_obstacles == result.obstacles
+    m = Match(light)
+    while m.state.n_obstacles == 0 or m.state.ply % 4 != 1:
+        m.step()
+    saved = m.save_checkpoint(tmp_path / "o.json")
+    resumed = tmp_path / "r.jsonl"
+    r2 = Match.from_checkpoint(saved, observers=[Recorder(resumed)]).run()
+    assert (r2.obstacles, r2.winning_team, r2.n_plies) == (
+        result.obstacles,
+        result.winning_team,
+        result.n_plies,
+    )
+
+    def timeless(moves: list[dict[str, object]]) -> list[dict[str, object]]:
+        return [{k: v for k, v in mv.items() if k != "time"} for mv in moves]
+
+    assert timeless(GameLog.load(resumed).moves) == timeless(log.moves)
+    # Un journal dont les obstacles ont ete modifies est refuse au rejeu.
+    lines = path.read_text(encoding="utf-8").splitlines()
+    idx = next(i for i, ln in enumerate(lines) if json.loads(ln).get("obstacles") and i > 0)
+    rec = json.loads(lines[idx])
+    rec["obstacles"][0] = [rec["obstacles"][0][0] ^ 1, rec["obstacles"][0][1]]
+    lines[idx] = json.dumps(rec)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    with pytest.raises(LogError, match="obstacles"):
+        GameLog.load(path).final_state()
+
+
+def test_obstacle_rendering() -> None:
+    from tron.viz import make_palette
+    from tron.viz.render import color_grid
+
+    cfg = _obst_cfg(every=1, count=4, margin=0)
+    st = GameState(cfg)
+    _walk(st, random.Random(3), limit=6)
+    pal = make_palette(cfg.team_index)
+    img = color_grid(st, pal)
+    cells = [st.coords(c) for c in range(st.size) if st.grid[c] == -3]
+    assert cells and all(tuple(img[y, x]) == pal.muted for x, y in cells)

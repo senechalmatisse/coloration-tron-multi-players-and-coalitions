@@ -156,6 +156,8 @@ class MatchResult:
     """Tours complets joués (modes à règles, P09 ; 0 sinon)."""
     scores: tuple[int, ...] = ()
     """Score de chaque équipe de victoire (contrôle de zone) ; vide sinon."""
+    obstacles: int = 0
+    """Obstacles dynamiques posés pendant la partie (P09.3)."""
 
     @property
     def n_players(self) -> int:
@@ -211,6 +213,7 @@ class MatchResult:
         row["survival_order"] = ";".join(str(p) for p in self.survival_order)
         row["rounds"] = self.rounds
         row["team_scores"] = ";".join(str(s) for s in self.scores)
+        row["obstacles"] = self.obstacles
         return row
 
 

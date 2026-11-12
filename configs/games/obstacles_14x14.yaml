@@ -1,0 +1,21 @@
+# Obstacles dynamiques (P09.3) : a la fin des tours complets 3, 6, 9...
+# (start, puis tous les every tours), count obstacles apparaissent sur des cases
+# libres, jamais sur une tete ni a distance de Manhattan <= margin d'une tete
+# vivante, dans la limite de max obstacles au total.
+# Les cases sont tirees par un hachage deterministe de la graine de la partie et
+# du tour : la meme position donne toujours les memes obstacles, et la recherche
+# les anticipe. Combinable avec tous les modes (ici : regles classiques).
+#   tron play configs/games/obstacles_14x14.yaml --no-gui --games 8 --out results/obstacles
+name: obstacles
+grid: 14
+seed: 21
+placement: {mode: regular, rotate: true}
+heuristic: {name: voronoi, tie: order}
+rules:
+  mode: classic
+  obstacles: {every: 3, count: 4, start: 3, max: 48, margin: 1}
+players:
+  - {name: a1, team: A, agent: paranoid, depth: 4}
+  - {name: b1, team: B, agent: maxn, depth: 3}
+  - {name: a2, team: A, agent: social, depth: 3, profile: team}
+  - {name: b2, team: B, agent: mcts, simulations: 300}

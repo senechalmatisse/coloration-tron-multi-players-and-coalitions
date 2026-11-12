@@ -11,7 +11,7 @@ from collections.abc import Sequence
 import numpy as np
 
 from tron.core.directions import PASS
-from tron.core.state import FREE, GameState
+from tron.core.state import FREE, OBSTACLE, GameState
 from tron.viz.palette import Palette, label_ink
 
 try:  # Pillow sert seulement à inscrire les numéros des joueurs
@@ -31,6 +31,7 @@ def color_grid(state: GameState, palette: Palette, owners: np.ndarray | None = N
         free = g == FREE
         for p in range(state.n):
             img[free & (owners == p)] = palette.territory[p]
+    img[g == OBSTACLE] = palette.muted  # obstacles dynamiques (P09.3)
     for p in range(state.n):
         img[g == p] = palette.player[p] if state.is_alive(p) else palette.dead[p]
     for p in range(state.n):
