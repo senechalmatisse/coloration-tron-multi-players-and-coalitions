@@ -36,8 +36,9 @@ from __future__ import annotations
 
 import math
 from collections import deque
-from collections.abc import Sequence
-from dataclasses import dataclass
+from collections.abc import Mapping, Sequence
+from dataclasses import asdict, dataclass
+from typing import Any
 
 from tron.agents.context import DiplomacySnapshot
 from tron.core.config import GameConfig
@@ -184,6 +185,32 @@ class OpponentModel:
     def reset(self) -> None:
         for h in self._history.values():
             h.clear()
+
+    def to_dict(self) -> dict[str, Any]:
+        """Fenêtres d'observation, pour une sauvegarde exacte (P08)."""
+        return {str(q): [asdict(f) for f in hist] for q, hist in self._history.items()}
+
+    def restore(self, data: Mapping[str, Any]) -> None:
+        self.reset()
+        for key, feats in data.items():
+            q = int(key)
+            if q not in self._history:
+                raise ValueError(f"adversaire inconnu dans la sauvegarde : {q}")
+            for f in feats:
+                self._history[q].append(
+                    MoveFeatures(
+                        player=int(f["player"]),
+                        ply=int(f["ply"]),
+                        delta_mobility=int(f["delta_mobility"]),
+                        delta_territory=float(f["delta_territory"]),
+                        min_head_distance=(
+                            None if f["min_head_distance"] is None else int(f["min_head_distance"])
+                        ),
+                        delta_components=int(f["delta_components"]),
+                        others_mobility_delta=int(f["others_mobility_delta"]),
+                        alignment=tuple(None if a is None else float(a) for a in f["alignment"]),
+                    )
+                )
 
     def history(self, player: int) -> tuple[MoveFeatures, ...]:
         self._check(player)

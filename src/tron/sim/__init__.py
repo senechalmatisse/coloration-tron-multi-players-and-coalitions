@@ -1,6 +1,7 @@
 """Simulation : boucle de partie, journal JSONL, rejeu, arène, métriques de partie."""
 
 from tron.sim.arena import game_config, run_arena
+from tron.sim.checkpoint import CHECKPOINT_FORMAT, CheckpointError, load_checkpoint, save_checkpoint
 from tron.sim.diplomacy import (
     AllianceEvent,
     DiplomacyError,
@@ -23,10 +24,12 @@ from tron.sim.result import (
 )
 
 __all__ = [
+    "CHECKPOINT_FORMAT",
     "LOG_FORMAT",
     "METRICS_VERSION",
     "READABLE_FORMATS",
     "AllianceEvent",
+    "CheckpointError",
     "DiplomacyError",
     "DiplomacyIntent",
     "DiplomacySnapshot",
@@ -46,7 +49,9 @@ __all__ = [
     "environment_info",
     "game_config",
     "git_hash",
+    "load_checkpoint",
     "metrics_from_moves",
     "run_arena",
+    "save_checkpoint",
     "summarize_diplomacy",
 ]

@@ -11,8 +11,9 @@ from __future__ import annotations
 import inspect
 from collections.abc import Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from time import perf_counter
-from typing import Protocol
+from typing import Any, Protocol
 
 from tron.agents.base import Agent, DecisionDetails, SearchStats, build_agents
 from tron.agents.context import AllianceEvent, DecisionContext
@@ -113,6 +114,9 @@ class Match:
             DiplomacyState(config.diplomacy, config.n_players) if config.diplomacy.enabled else None
         )
         self._with_context = [accepts_context(a) for a in self.agents]
+        self.prior_moves: list[dict[str, Any]] = []
+        """Lignes ``move`` jouées avant une reprise depuis une sauvegarde (P08)."""
+        self._resumed = False
         self._started = False
         self._t0 = 0.0
         n = config.n_players
@@ -134,7 +138,7 @@ class Match:
         if not self._started:
             self._started = True
             self._t0 = perf_counter()
-            if self.metrics is not None:
+            if self.metrics is not None and not self._resumed:
                 self.metrics.start(self.state)
             for obs in self.observers:
                 obs.on_start(self)
@@ -195,6 +199,19 @@ class Match:
         if st.is_terminal():
             self._finish()
         return event
+
+    def save_checkpoint(self, path: str | Path) -> Path:
+        """Sauvegarde exacte de la partie en cours (voir :mod:`tron.sim.checkpoint`)."""
+        from tron.sim.checkpoint import save_checkpoint  # noqa: PLC0415 - import circulaire
+
+        return save_checkpoint(self, path)
+
+    @classmethod
+    def from_checkpoint(cls, path: str | Path, observers: Sequence[MatchObserver] = ()) -> Match:
+        """Reprend une partie sauvegardée là où elle s'était arrêtée."""
+        from tron.sim.checkpoint import load_checkpoint  # noqa: PLC0415 - import circulaire
+
+        return load_checkpoint(path, observers)
 
     def run(self) -> MatchResult:
         """Joue la partie jusqu'au bout."""

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any, ClassVar
 
 from tron.agents.base import Agent, DecisionDetails, SearchStats, register_agent
@@ -71,6 +71,25 @@ class SearchAgent(Agent):
     def reset(self) -> None:
         self.memory.clear()
         self.last_result = None
+
+    def snapshot_state(self) -> dict[str, Any]:
+        data = super().snapshot_state()
+        mem = self.memory
+        data["tt"] = [[k, v] for k, v in mem.tt.items()] if mem.tt is not None else None
+        data["history"] = list(mem.history) if mem.history is not None else None
+        return data
+
+    def restore_state(self, data: Mapping[str, Any]) -> None:
+        super().restore_state(data)
+        mem = self.memory
+        if mem.tt is not None:
+            mem.tt.clear()
+            mem.tt.update((int(k), int(v)) for k, v in data.get("tt") or [])
+        hist = data.get("history")
+        if mem.history is not None and hist is not None:
+            if len(hist) != len(mem.history):
+                raise ValueError("mémoire d'historique de taille incohérente")
+            mem.history[:] = [int(x) for x in hist]
 
     def explain(self, result: SearchResult | None, moves: list[int]) -> DecisionDetails:
         """Valeurs racine exactes (``None`` pour un coup seulement borné par l'élagage)."""

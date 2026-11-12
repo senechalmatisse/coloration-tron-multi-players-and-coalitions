@@ -35,6 +35,7 @@ probablement ``cooperative`` (probabilité ≥ ``cooperation_threshold``) s'il e
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 from tron.agents.base import (
@@ -242,6 +243,24 @@ class AdaptiveAgent(Agent):
         self.adaptive_heuristic.set_weights(self.base_weights)
         self.weights_used = dict(self.base_weights)
         self._snapshot = None
+
+    def snapshot_state(self) -> dict[str, Any]:
+        return {
+            **super().snapshot_state(),
+            "inner": self.inner.snapshot_state(),
+            "model": self.model.to_dict(),
+            "weights": dict(self.weights_used),
+            "diplomacy": self._snapshot.to_dict() if self._snapshot is not None else None,
+        }
+
+    def restore_state(self, data: Mapping[str, Any]) -> None:
+        super().restore_state(data)
+        self.inner.restore_state(data["inner"])
+        self.model.restore(data["model"])
+        self.adaptive_heuristic.set_weights(dict(data["weights"]))
+        self.weights_used = self.adaptive_heuristic.weights
+        snap = data.get("diplomacy")
+        self._snapshot = DiplomacySnapshot.from_dict(snap) if snap is not None else None
 
     def observe_move(
         self,

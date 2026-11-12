@@ -27,8 +27,9 @@ le premier dans cette relation). La confiance de p envers q vaut
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from typing import Any
 
 from tron.agents.context import (
     AllianceEvent,
@@ -177,6 +178,34 @@ class DiplomacyState:
 
     def context(self, ply: int) -> DecisionContext:
         return DecisionContext(ply=ply, diplomacy=self.snapshot(ply))
+
+    def to_dict(self) -> dict[str, Any]:
+        """État complet (propositions, alliances, délais, ruptures, historique), P08."""
+        return {
+            "pending": [[p, t, r] for (p, t), r in sorted(self._pending.items())],
+            "active": [[a, b, r] for (a, b), r in sorted(self._active.items())],
+            "cooldown": [[a, b, r] for (a, b), r in sorted(self._cooldown.items())],
+            "breaks": [list(row) for row in self._breaks],
+            "betrayals": [list(row) for row in self._betrayals],
+            "alive": list(self._alive),
+            "events": [ev.to_dict() for ev in self.events],
+        }
+
+    @classmethod
+    def from_dict(
+        cls, spec: DiplomacySpec, n_players: int, data: Mapping[str, Any]
+    ) -> DiplomacyState:
+        state = cls(spec, n_players)
+        state._pending = {(int(p), int(t)): int(r) for p, t, r in data["pending"]}
+        state._active = {(int(a), int(b)): int(r) for a, b, r in data["active"]}
+        state._cooldown = {(int(a), int(b)): int(r) for a, b, r in data["cooldown"]}
+        state._breaks = [[int(x) for x in row] for row in data["breaks"]]
+        state._betrayals = [[int(x) for x in row] for row in data["betrayals"]]
+        state._alive = [bool(x) for x in data["alive"]]
+        state.events = [AllianceEvent.from_dict(ev) for ev in data["events"]]
+        if len(state._alive) != n_players or len(state._breaks) != n_players:
+            raise ValueError("état diplomatique de taille incohérente")
+        return state
 
 
 @dataclass(frozen=True, slots=True)

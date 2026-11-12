@@ -43,8 +43,43 @@ class LogError(ValueError):
     """Journal illisible ou incohérent."""
 
 
+def move_record(event: MoveEvent, details: bool = True) -> dict[str, Any]:
+    """Ligne ``move`` du journal pour un événement de partie."""
+    record: dict[str, Any] = {
+        "type": "move",
+        "ply": event.ply,
+        "player": event.player,
+        "dir": direction_name(event.direction),
+        "to": list(event.target) if event.target else None,
+        "elim": event.eliminated,
+    }
+    if event.stats is not None:
+        s = event.stats
+        record.update(
+            nodes=s.nodes,
+            time=round(s.time, 6),
+            value=nan_to_none(s.value),
+            depth=s.depth,
+            ties=s.ties,
+            engine=s.engine,
+            leaves=s.leaves,
+            prunes=s.prunes,
+            pv="".join(direction_name(d) for d in s.pv),
+        )
+    if event.diplomacy:
+        record["diplomacy"] = [ev.to_dict() for ev in event.diplomacy]
+    if details and event.details is not None:
+        record["details"] = event.details.to_dict()
+    return record
+
+
 class Recorder:
-    """Observateur qui écrit le journal JSONL d'une partie."""
+    """Observateur qui écrit le journal JSONL d'une partie.
+
+    Pour une partie reprise depuis une sauvegarde (P08), ``Match.prior_moves``
+    contient les lignes ``move`` déjà jouées : elles sont réécrites après
+    l'en-tête, si bien que le journal reste complet et rejouable.
+    """
 
     def __init__(self, path: str | Path, details: bool = True) -> None:
         self.path = Path(path)
@@ -69,34 +104,11 @@ class Recorder:
                 "diplomacy": match.config.diplomacy.to_dict(),
             }
         )
+        for record in match.prior_moves:
+            self._write(record)
 
     def on_event(self, match: Match, event: MoveEvent) -> None:
-        record: dict[str, Any] = {
-            "type": "move",
-            "ply": event.ply,
-            "player": event.player,
-            "dir": direction_name(event.direction),
-            "to": list(event.target) if event.target else None,
-            "elim": event.eliminated,
-        }
-        if event.stats is not None:
-            s = event.stats
-            record.update(
-                nodes=s.nodes,
-                time=round(s.time, 6),
-                value=nan_to_none(s.value),
-                depth=s.depth,
-                ties=s.ties,
-                engine=s.engine,
-                leaves=s.leaves,
-                prunes=s.prunes,
-                pv="".join(direction_name(d) for d in s.pv),
-            )
-        if event.diplomacy:
-            record["diplomacy"] = [ev.to_dict() for ev in event.diplomacy]
-        if self.details and event.details is not None:
-            record["details"] = event.details.to_dict()
-        self._write(record)
+        self._write(move_record(event, self.details))
 
     def on_end(self, match: Match, result: MatchResult) -> None:
         self._write({"type": "result", **result.to_dict()})

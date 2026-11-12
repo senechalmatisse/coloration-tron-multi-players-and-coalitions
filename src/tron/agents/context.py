@@ -14,8 +14,9 @@ reçoivent sans dépendre de la simulation ; le gestionnaire mutable des allianc
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 
 INTENT_KINDS = ("propose", "break")
 EVENT_KINDS = ("proposed", "formed", "broken", "expired", "dissolved", "rejected")
@@ -107,6 +108,27 @@ class DiplomacySnapshot:
     def in_cooldown(self, a: int, b: int) -> bool:
         lo, hi = min(a, b), max(a, b)
         return any(x == lo and y == hi and self.ply < until for x, y, until in self.cooldowns)
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "ply": self.ply,
+            "active_pairs": [list(p) for p in self.active_pairs],
+            "pending": [list(p) for p in self.pending],
+            "trust": [list(r) for r in self.trust],
+            "betrayals": [list(r) for r in self.betrayals],
+            "cooldowns": [list(c) for c in self.cooldowns],
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> DiplomacySnapshot:
+        return cls(
+            ply=int(data["ply"]),
+            active_pairs=tuple((int(a), int(b)) for a, b in data.get("active_pairs", [])),
+            pending=tuple((int(a), int(b), int(c)) for a, b, c in data.get("pending", [])),
+            trust=tuple(tuple(float(x) for x in r) for r in data.get("trust", [])),
+            betrayals=tuple(tuple(int(x) for x in r) for r in data.get("betrayals", [])),
+            cooldowns=tuple((int(a), int(b), int(c)) for a, b, c in data.get("cooldowns", [])),
+        )
 
 
 @dataclass(frozen=True, slots=True)

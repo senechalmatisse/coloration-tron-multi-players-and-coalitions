@@ -52,7 +52,7 @@ qu'avec la diplomatie explicite (propositions et ruptures d'alliance).
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
 from tron.agents.context import AllianceEvent
@@ -176,6 +176,28 @@ class MetricsCollector:
         for t, members in enumerate(self.members):
             self._terr_sum[t] += sum(shares[p] for p in members)
         self._terr_obs += 1
+
+    # ------------------------------------------------------------- sauvegarde
+    _FIELDS = (
+        "_dist_sum",
+        "_dist_obs",
+        "_terr_sum",
+        "_terr_obs",
+        "_collisions",
+        "_blocks",
+        "_moves",
+    )
+
+    def to_dict(self) -> dict[str, Any]:
+        """Accumulateurs, pour une sauvegarde exacte (P08)."""
+        return {name: getattr(self, name) for name in self._FIELDS} | {"every": self.every}
+
+    def restore(self, data: Mapping[str, Any]) -> None:
+        if int(data["every"]) != self.every:
+            raise ValueError("pas d'observation du territoire incohérent")
+        for name in self._FIELDS:
+            value = data[name]
+            setattr(self, name, list(value) if isinstance(value, list) else value)
 
     # --------------------------------------------------------------- bilan
     def finish(self, state: GameState, diplomacy: DiplomacySummary | None = None) -> MatchMetrics:

@@ -227,6 +227,21 @@ class Agent(ABC):
     def reset(self) -> None:  # noqa: B027 - crochet facultatif, vide par défaut
         """Réinitialise la mémoire de l'agent (nouvelle partie)."""
 
+    def snapshot_state(self) -> dict[str, Any]:
+        """État interne nécessaire à une reprise exacte (P08), sérialisable en JSON.
+
+        Par défaut : l'état du générateur aléatoire de l'agent. Un agent qui garde
+        une mémoire entre ses décisions l'ajoute (voir :meth:`restore_state`).
+        """
+        return {"rng": self.rng.bit_generator.state}
+
+    def restore_state(self, data: Mapping[str, Any]) -> None:
+        """Restaure l'état produit par :meth:`snapshot_state` (après ``reset``)."""
+        try:
+            self.rng.bit_generator.state = dict(data["rng"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(f"état aléatoire invalide pour l'agent {self.name}") from exc
+
     def observe_move(  # noqa: B027 - crochet facultatif, vide par défaut
         self,
         player: int,

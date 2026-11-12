@@ -13,8 +13,9 @@ Python ; les tableaux eux-mêmes sont passés aux noyaux compilés.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 
@@ -384,6 +385,101 @@ class GameState:
                 if "a" <= ch <= "h":
                     state._g[state.index(x, y)] = ord(ch) - ord("a")
         state.key = state.compute_key()
+        return state
+
+    # ------------------------------------------------------------ instantané
+    def to_snapshot(self) -> dict[str, Any]:
+        """Instantané sérialisable (JSON) de tout l'état, historique ``apply``/``undo`` compris.
+
+        La grille (bordure comprise) est codée sur un caractère par case :
+        ``0`` bordure, ``1`` libre, ``2`` + i mur du joueur i.
+        """
+        return {
+            "width": self.width,
+            "height": self.height,
+            "grid": "".join(chr(48 + int(v) + 2) for v in self.grid.tolist()),
+            "heads": [int(h) for h in self.heads.tolist()],
+            "alive": [bool(a) for a in self.alive.tolist()],
+            "death_ply": [int(d) for d in self.death_ply.tolist()],
+            "positions": [list(p) for p in self.positions],
+            "current": self.current,
+            "ply": self.ply,
+            "n_moves": self.n_moves,
+            "elim_order": list(self.elim_order),
+            "team_alive": list(self.team_alive),
+            "teams_alive": self.teams_alive,
+            "key": self.key,
+            "history": [list(h) for h in self._hist],
+        }
+
+    @classmethod
+    def from_snapshot(cls, config: GameConfig, data: Mapping[str, Any]) -> GameState:
+        """Reconstruit un état depuis :meth:`to_snapshot` en vérifiant sa cohérence.
+
+        Lève ``ValueError`` si les dimensions, la grille, les têtes, les joueurs
+        vivants, les compteurs d'équipes ou la clé de Zobrist ne correspondent pas.
+        """
+        try:
+            w, h = int(data["width"]), int(data["height"])
+            if (w, h) != (config.width, config.height):
+                raise ValueError(f"dimensions {w}x{h} incompatibles avec la configuration")
+            state = cls(config, positions=[tuple(p) for p in data["positions"]])
+            text = str(data["grid"])
+            if len(text) != state.size:
+                raise ValueError("taille de grille incohérente")
+            values = [ord(ch) - 50 for ch in text]
+            if any(not BORDER <= v < config.n_players for v in values):
+                raise ValueError("valeur de case invalide dans la grille")
+            g2 = np.asarray(values, dtype=np.int8).reshape(h + 2, w + 2)
+            if (g2[0, :] != BORDER).any() or (g2[-1, :] != BORDER).any():
+                raise ValueError("bordure de grille invalide")
+            if (g2[:, 0] != BORDER).any() or (g2[:, -1] != BORDER).any():
+                raise ValueError("bordure de grille invalide")
+            if (g2[1:-1, 1:-1] == BORDER).any():
+                raise ValueError("bordure à l'intérieur de la grille")
+            n = config.n_players
+            heads = [int(x) for x in data["heads"]]
+            alive = [bool(x) for x in data["alive"]]
+            death = [int(x) for x in data["death_ply"]]
+            if not (len(heads) == len(alive) == len(death) == n):
+                raise ValueError("nombre de joueurs incohérent")
+            state.grid[:] = g2.ravel()
+            state.heads[:] = heads
+            state.alive[:] = alive
+            state.death_ply[:] = death
+            for p in range(n):
+                if state.grid[heads[p]] != p:
+                    raise ValueError(f"tête du joueur {p} hors de ses murs")
+                if alive[p] != (death[p] < 0):
+                    raise ValueError(f"élimination du joueur {p} incohérente")
+            state.current = int(data["current"])
+            state.ply = int(data["ply"])
+            state.n_moves = int(data["n_moves"])
+            state.elim_order = [int(x) for x in data["elim_order"]]
+            if sorted(state.elim_order) != sorted(p for p in range(n) if not alive[p]):
+                raise ValueError("ordre d'élimination incohérent")
+            team = state._team
+            counts = [
+                sum(1 for p in range(n) if alive[p] and team[p] == t)
+                for t in range(len(state.team_alive))
+            ]
+            if counts != [int(x) for x in data["team_alive"]]:
+                raise ValueError("compteurs d'équipes vivantes incohérents")
+            state.team_alive = counts
+            state.teams_alive = sum(1 for c in counts if c > 0)
+            if state.teams_alive != int(data["teams_alive"]):
+                raise ValueError("nombre d'équipes vivantes incohérent")
+            if not 0 <= state.current < n or (state.teams_alive > 1 and not alive[state.current]):
+                raise ValueError("joueur au trait invalide")
+            state._hist = [
+                (int(a), int(b), int(c), int(d)) for a, b, c, d in data.get("history", [])
+            ]
+            key = int(data["key"])
+        except (KeyError, TypeError) as exc:
+            raise ValueError(f"instantané d'état incomplet : {exc}") from exc
+        if state.compute_key() != key:
+            raise ValueError("clé de Zobrist incohérente avec la grille")
+        state.key = key
         return state
 
     def __repr__(self) -> str:

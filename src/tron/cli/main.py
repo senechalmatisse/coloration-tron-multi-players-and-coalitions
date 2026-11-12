@@ -1,4 +1,4 @@
-"""Commande ``tron`` (F7.4) : play, replay, bench, run, analyze."""
+"""Commande ``tron`` (F7.4) : play, replay, bench, run, analyze, resume-checkpoint…"""
 
 from __future__ import annotations
 
@@ -23,6 +23,8 @@ def cmd_play(args: argparse.Namespace) -> int:
             config.seed if args.seed is None else args.seed,
             args.first_player,
         )
+    if args.checkpoint is not None:
+        return _play_to_checkpoint(config, args)
     if not args.no_gui:
         from tron.viz.arcade_app import run_live  # noqa: PLC0415 - fenêtre à la demande
 
@@ -73,6 +75,64 @@ def cmd_play(args: argparse.Namespace) -> int:
         print("victoires par équipe :", dict(sorted(wins.items())))
     if args.out:
         print(f"résultats : {Path(args.out) / 'results.csv'}")
+    return 0
+
+
+def _print_result(r: object) -> None:
+    from tron.sim.result import MatchResult  # noqa: PLC0415
+
+    assert isinstance(r, MatchResult)
+    print(
+        f"victoire de {r.winning_team} en {r.n_moves} coups ({r.n_plies} demi-coups) · "
+        f"rangs {list(r.ranks)}"
+    )
+
+
+def _play_until(match: object, stop_after: int | None) -> None:
+    from tron.sim.match import Match  # noqa: PLC0415
+
+    assert isinstance(match, Match)
+    while not match.finished and (stop_after is None or match.state.ply < stop_after):
+        if match.step() is None:
+            break
+
+
+def _play_to_checkpoint(config: GameConfig, args: argparse.Namespace) -> int:
+    """Joue une partie jusqu'au demi-coup ``--stop-after`` puis la sauvegarde (P08)."""
+    from tron.sim.match import Match  # noqa: PLC0415
+
+    if not args.no_gui or args.games != 1:
+        raise ConfigError("--checkpoint exige --no-gui et une seule partie")
+    match = Match(config)
+    _play_until(match, args.stop_after)
+    path = match.save_checkpoint(args.checkpoint)
+    state = "terminée" if match.finished else f"arrêtée au demi-coup {match.state.ply}"
+    print(f"partie {state} · sauvegarde : {path}")
+    if match.result is not None:
+        _print_result(match.result)
+    return 0
+
+
+def cmd_resume(args: argparse.Namespace) -> int:
+    """Reprend une partie sauvegardée, jusqu'au bout ou jusqu'à ``--stop-after``."""
+    from tron.sim.match import Match, MatchObserver  # noqa: PLC0415
+    from tron.sim.recorder import Recorder  # noqa: PLC0415
+
+    observers: list[MatchObserver] = []
+    if args.log is not None:
+        observers.append(Recorder(args.log))
+    match = Match.from_checkpoint(args.path, observers=observers)
+    start = match.state.ply
+    _play_until(match, args.stop_after)
+    print(f"reprise au demi-coup {start} · {match.state.ply - start} demi-coups joués")
+    if args.stop_after is not None and not match.finished:
+        out = match.save_checkpoint(args.checkpoint or args.path)
+        print(f"sauvegarde : {out}")
+        return 0
+    if match.result is not None:
+        _print_result(match.result)
+    if args.log is not None:
+        print(f"journal complet : {args.log}")
     return 0
 
 
@@ -260,8 +320,17 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--games", type=int, default=1, help="nombre de parties (sans affichage)")
     p.add_argument("--out", type=Path, help="dossier des résultats et journaux")
     p.add_argument("--paused", action="store_true", help="démarre en pause")
+    p.add_argument("--checkpoint", type=Path, help="sauvegarde reprenable (avec --no-gui)")
+    p.add_argument("--stop-after", type=int, help="demi-coup où s'arrêter pour sauvegarder")
     viz_options(p)
     p.set_defaults(func=cmd_play)
+
+    p = sub.add_parser("resume-checkpoint", help="reprend une partie sauvegardée")
+    p.add_argument("path", type=Path, help="fichier de sauvegarde (JSON)")
+    p.add_argument("--log", type=Path, help="journal JSONL complet de la partie reprise")
+    p.add_argument("--stop-after", type=int, help="s'arrête à ce demi-coup et sauvegarde")
+    p.add_argument("--checkpoint", type=Path, help="fichier de la nouvelle sauvegarde")
+    p.set_defaults(func=cmd_resume)
 
     p = sub.add_parser("replay", help="rejoue un journal JSONL")
     p.add_argument("log", type=Path)
