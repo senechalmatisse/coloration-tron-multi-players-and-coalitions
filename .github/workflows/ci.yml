@@ -1,0 +1,107 @@
+# Integration continue (P14) : lint, format, types, tests avec et sans JIT, couverture.
+# Python : version du fichier .python-version (3.14) ; dependances : bornes de
+# pyproject.toml (pas de fichier de verrouillage dans le depot).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * 1"   # lundi : tests de charge
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  MPLBACKEND: Agg          # figures sans affichage
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  checks:
+    name: Lint, format, types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Python (.python-version)
+        run: uv python install
+      - name: Dependances
+        run: uv sync --extra dev
+      - name: ruff check
+        run: uv run ruff check src tests
+      - name: ruff format
+        run: uv run ruff format --check src tests
+      - name: mypy
+        run: uv run mypy src
+
+  tests:
+    name: Tests (${{ matrix.backend }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - backend: numba
+            disable_jit: "0"
+          - backend: python
+            disable_jit: "1"
+    env:
+      NUMBA_DISABLE_JIT: ${{ matrix.disable_jit }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv python install
+      - run: uv sync --extra dev
+      - name: pytest
+        run: uv run pytest
+
+  coverage:
+    name: Couverture core, eval, agents (seuil 80 %)
+    runs-on: ubuntu-latest
+    env:
+      NUMBA_DISABLE_JIT: "1"   # les noyaux compiles ne sont pas mesurables sous JIT
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv python install
+      - run: uv sync --extra dev
+      - name: pytest --cov
+        run: >-
+          uv run pytest
+          --cov=tron.core --cov=tron.eval --cov=tron.agents
+          --cov-report=term-missing --cov-report=xml
+          --cov-fail-under=80
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-xml
+          path: coverage.xml
+
+  load:
+    name: Tests de charge
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv python install
+      - run: uv sync --extra dev
+      - name: pytest -m load
+        run: uv run pytest -m load
+      - name: Suite de mesures
+        run: uv run tron bench --suite --out bench.json --reference benchmarks/reference/suite-python-20x20-4p.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bench
+          path: bench.json
