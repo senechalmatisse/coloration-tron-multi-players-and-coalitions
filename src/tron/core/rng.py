@@ -15,6 +15,12 @@ STREAM_PLACEMENT = 1
 STREAM_AGENT = 2
 STREAM_PLAN = 3
 STREAM_OBSTACLES = 4
+STREAM_TRAIN = 5
+"""Graines des épisodes d'entraînement (P10)."""
+STREAM_EVAL = 6
+"""Graines des parties d'évaluation (P10), disjointes de celles d'entraînement."""
+STREAM_LEARNING = 7
+"""Aléa propre à l'environnement d'apprentissage (conversion d'action illégale)."""
 
 _MASK64 = (1 << 64) - 1
 _MASK63 = (1 << 63) - 1

@@ -1,0 +1,33 @@
+# Entrainement de reference (P10) : politique lineaire sur les etats apres coup
+# (SARSA(0) semi-gradient, caracteristiques afterstate-v1), NumPy seulement.
+# - game : partie d'entrainement (chemin relatif a ce fichier) ; player : apprenant ;
+# - episodes : episodes par generation ; generations : en auto-jeu, chaque
+#   generation figee rejoint les adversaires possibles ;
+# - opponents : agents de reference des places adverses (tires a chaque episode) ;
+# - evaluation : graines disjointes de celles d'entrainement, comparaison aux
+#   agents de reference, et configurations jamais vues (configs).
+#   tron train configs/training/linear_duel.yaml --out models/linear_duel
+name: linear_duel
+game: ../games/learning_duel_10x10.yaml
+player: 0
+seed: 7
+episodes: 150
+generations: 2
+learning:
+  alpha: 0.05
+  gamma: 1.0
+  epsilon: {start: 0.3, end: 0.02}
+env:
+  shaping: territory
+  shaping_scale: 0.1
+  max_steps: 200
+opponents:
+  - {agent: greedy}
+  - {agent: random}
+  - {agent: paranoid, depth: 2}
+self_play: {enabled: true, share: 0.3}
+evaluation:
+  games: 20
+  references: [greedy, maxn, paranoid, social]
+  depth: 2
+  configs: [../games/mcts_duel_12x12.yaml]

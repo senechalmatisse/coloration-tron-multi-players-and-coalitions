@@ -17,6 +17,7 @@ from tron.agents.context import (
     DiplomacyIntent,
     DiplomacySnapshot,
 )
+from tron.agents.learned import LearnedAgent
 from tron.agents.mcts import ROLLOUT_POLICIES, MCTSAgent
 from tron.agents.opponents import BEHAVIOURS, MoveFeatures, OpponentModel
 from tron.agents.search import SearchMemory, SearchOptions, SearchResult, search
@@ -47,6 +48,7 @@ __all__ = [
     "DiplomacyIntent",
     "DiplomacySnapshot",
     "GreedyAgent",
+    "LearnedAgent",
     "LinearBound",
     "MCTSAgent",
     "MaxNAgent",

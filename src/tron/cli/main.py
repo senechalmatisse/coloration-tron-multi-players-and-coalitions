@@ -1,4 +1,4 @@
-"""Commande ``tron`` (F7.4) : play, replay, bench, run, analyze, resume-checkpoint…"""
+"""Commande ``tron`` (F7.4) : play, replay, bench, run, analyze, train, resume-checkpoint…"""
 
 from __future__ import annotations
 
@@ -297,6 +297,73 @@ def cmd_analyze(args: argparse.Namespace) -> int:
     return 0
 
 
+# ------------------------------------------------------------ apprentissage
+def cmd_train(args: argparse.Namespace) -> int:
+    from tron.learning.train import TrainingSpec, evaluation_markdown, run_training  # noqa: PLC0415
+
+    spec = TrainingSpec.from_yaml(args.config).with_overrides(
+        episodes=args.episodes,
+        generations=args.generations,
+        eval_games=args.eval_games,
+        seed=args.seed,
+    )
+    out = args.out or Path("models") / spec.name
+    print(
+        f"entraînement {spec.name} : {spec.total_episodes} épisodes "
+        f"({spec.generations} génération(s)), apprenant {spec.player}, partie {spec.game.name}"
+    )
+    every = max(1, spec.total_episodes // 10)
+
+    def progress(row: dict[str, object]) -> None:
+        k = int(str(row["episode"]))
+        if not args.quiet and (k + 1) % every == 0:
+            print(f"  épisode {k + 1}/{spec.total_episodes} : {row['outcome']}")
+
+    start = time.perf_counter()
+    result = run_training(spec, out, on_episode=progress)
+    print(
+        f"modèle : {out / 'model.json'} ({time.perf_counter() - start:.1f} s, "
+        f"victoires sur les derniers épisodes : {result.model.metadata['recent_win_rate']:.0%})"
+    )
+    if result.evaluation:
+        print(
+            evaluation_markdown(
+                result.evaluation, len(result.train_seeds), len(result.eval_seeds)
+            ).rstrip()
+        )
+        print(f"rapport : {out / 'evaluation.md'}")
+    return 0
+
+
+def cmd_evaluate_model(args: argparse.Namespace) -> int:
+    from tron.learning.model import load_model  # noqa: PLC0415
+    from tron.learning.train import (  # noqa: PLC0415
+        REFERENCES,
+        evaluate_model,
+        evaluation_markdown,
+        write_csv,
+    )
+
+    model = load_model(args.model)
+    config = GameConfig.from_yaml(args.config)
+    refs = tuple(r for r in (args.references or ",".join(REFERENCES)).split(",") if r)
+    rows = evaluate_model(
+        model,
+        config,
+        player=args.player,
+        references=refs,
+        games=args.games,
+        depth=args.depth,
+        seed=args.seed,
+    )
+    print(evaluation_markdown(rows).rstrip())
+    if args.out is not None:
+        args.out.mkdir(parents=True, exist_ok=True)
+        write_csv(args.out / "evaluation.csv", rows)
+        print(f"tableau : {args.out / 'evaluation.csv'}")
+    return 0
+
+
 # ----------------------------------------------------------------- parser
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="tron", description="Tron multi-joueur et coalitions")
@@ -372,6 +439,27 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--formula", help="formule de la régression logistique")
     p.add_argument("--annotate", action="store_true", help="valeurs dans les cartes de chaleur")
     p.set_defaults(func=cmd_analyze)
+
+    p = sub.add_parser("train", help="entraîne et évalue un modèle linéaire (P10)")
+    p.add_argument("config", type=Path, help="configuration d'entraînement YAML")
+    p.add_argument("--out", type=Path, help="dossier du modèle (défaut : models/<nom>)")
+    p.add_argument("--episodes", type=int, help="épisodes par génération")
+    p.add_argument("--generations", type=int, help="générations d'auto-jeu")
+    p.add_argument("--eval-games", type=int, help="parties d'évaluation par référence")
+    p.add_argument("--seed", type=int, help="graine de l'entraînement")
+    p.add_argument("--quiet", action="store_true", help="sans suivi des épisodes")
+    p.set_defaults(func=cmd_train)
+
+    p = sub.add_parser("evaluate-model", help="compare un modèle appris aux agents de référence")
+    p.add_argument("model", type=Path, help="fichier model.json")
+    p.add_argument("config", type=Path, help="configuration de partie YAML")
+    p.add_argument("--player", type=int, default=0, help="place jouée par le modèle")
+    p.add_argument("--games", type=int, default=20, help="parties par référence")
+    p.add_argument("--references", help="agents séparés par des virgules")
+    p.add_argument("--depth", type=int, default=2, help="profondeur des agents de recherche")
+    p.add_argument("--seed", type=int, default=0, help="graine des parties d'évaluation")
+    p.add_argument("--out", type=Path, help="dossier du tableau evaluation.csv")
+    p.set_defaults(func=cmd_evaluate_model)
     return parser
 
 

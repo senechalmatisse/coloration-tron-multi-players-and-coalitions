@@ -33,6 +33,11 @@ dev = [
     "types-PyYAML",
     "jupyter>=1.1",
 ]
+# Adaptateur Gymnasium facultatif (tron.learning.gym) ; l'environnement, le modele
+# lineaire et l'entrainement de reference n'ont besoin que de NumPy.
+learning = [
+    "gymnasium>=1.0",
+]
 
 [project.scripts]
 tron = "tron.cli.main:main"
@@ -77,5 +82,5 @@ no_implicit_optional = true
 check_untyped_defs = true
 
 [[tool.mypy.overrides]]
-module = ["numba.*", "yaml.*", "arcade.*", "imageio.*", "scipy.*", "statsmodels.*", "tqdm.*", "pandas.*", "matplotlib.*"]
+module = ["numba.*", "yaml.*", "arcade.*", "imageio.*", "scipy.*", "statsmodels.*", "tqdm.*", "pandas.*", "matplotlib.*", "gymnasium.*"]
 ignore_missing_imports = true

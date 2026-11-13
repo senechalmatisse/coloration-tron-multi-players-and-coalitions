@@ -1,0 +1,12 @@
+# Duel d'apprentissage (P10) sur une grille 10 x 10. Le joueur 0 est l'apprenant
+# dans l'environnement (tron.learning.TronEnv) : son agent ci-dessous ne sert que
+# lorsque la configuration est jouee directement (tron play).
+#   tron train configs/training/linear_duel.yaml --out models/linear_duel
+name: learning_duel
+grid: 10
+seed: 3
+placement: {mode: regular, rotate: true}
+heuristic: {name: voronoi, tie: order}
+players:
+  - {name: learner, team: A, agent: greedy}
+  - {name: opponent, team: B, agent: greedy}
