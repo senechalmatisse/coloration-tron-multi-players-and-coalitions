@@ -48,8 +48,11 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src", "tests"]
-addopts = "-q"
-markers = ["slow: tests longs (statistiques, campagnes)"]
+addopts = "-q -m 'not load'"
+markers = [
+    "slow: tests longs (statistiques, campagnes)",
+    "load: tests de charge, exclus par defaut (pytest -m load)",
+]
 
 [tool.coverage.run]
 source = ["tron"]

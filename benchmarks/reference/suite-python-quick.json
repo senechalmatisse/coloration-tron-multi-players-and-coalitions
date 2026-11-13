@@ -1,0 +1,321 @@
+{
+  "format": "tron-bench/1",
+  "environment": {
+    "code_version": "1.0.0",
+    "backend": "python",
+    "python": "3.13.18",
+    "implementation": "CPython",
+    "platform": "Linux-6.18.44-fc-v445-x86_64-with-glibc2.39",
+    "machine": "x86_64",
+    "cpu_count": 2
+  },
+  "params": {
+    "grid": 10,
+    "players": 2,
+    "per_phase": 2,
+    "seed": 0,
+    "agent": "paranoid",
+    "depth": 2,
+    "simulations": 30,
+    "repeats": 10,
+    "rows": 100,
+    "quick": true
+  },
+  "positions": {
+    "version": "positions/1",
+    "count": 8,
+    "phases": {
+      "opening": 2,
+      "midgame": 2,
+      "partitioned": 2,
+      "endgame": 2
+    },
+    "fingerprint": "7bd585cd682856e37515876f58d77a206d9896f09cde90511e447acc4cf464e7"
+  },
+  "measures": [
+    {
+      "name": "legal_moves",
+      "phase": "opening",
+      "unit": "appel",
+      "ops": 20,
+      "seconds": 5e-06,
+      "per_op_us": 0.25,
+      "per_second": 3998400.6,
+      "checksum": "7d61293078689add"
+    },
+    {
+      "name": "apply_undo",
+      "phase": "opening",
+      "unit": "apply+undo",
+      "ops": 60,
+      "seconds": 4.1e-05,
+      "per_op_us": 0.676,
+      "per_second": 1479873.7,
+      "checksum": "983bd614bb5afece"
+    },
+    {
+      "name": "voronoi",
+      "phase": "opening",
+      "unit": "évaluation",
+      "ops": 20,
+      "seconds": 0.000865,
+      "per_op_us": 43.264,
+      "per_second": 23114.1,
+      "checksum": "9e2f325c416ac606"
+    },
+    {
+      "name": "composite",
+      "phase": "opening",
+      "unit": "caractéristiques",
+      "ops": 20,
+      "seconds": 0.00233,
+      "per_op_us": 116.498,
+      "per_second": 8583.8,
+      "checksum": "57c3d046e489fa58"
+    },
+    {
+      "name": "search",
+      "phase": "opening",
+      "unit": "décision",
+      "ops": 2,
+      "seconds": 0.001196,
+      "per_op_us": 598.198,
+      "per_second": 1671.7,
+      "checksum": "1afbede49f8dedf7",
+      "nodes": 25,
+      "nodes_per_second": 20896.1,
+      "agent": "paranoid(d=2)"
+    },
+    {
+      "name": "mcts",
+      "phase": "opening",
+      "unit": "simulation",
+      "ops": 60,
+      "seconds": 0.004731,
+      "per_op_us": 78.846,
+      "per_second": 12682.9,
+      "checksum": "6b2ecca535ecdb9c",
+      "nodes": 62,
+      "nodes_per_second": 13105.7,
+      "agent": "mcts(30)"
+    },
+    {
+      "name": "legal_moves",
+      "phase": "midgame",
+      "unit": "appel",
+      "ops": 20,
+      "seconds": 5e-06,
+      "per_op_us": 0.229,
+      "per_second": 4363001.8,
+      "checksum": "9cc428963a6ae2db"
+    },
+    {
+      "name": "apply_undo",
+      "phase": "midgame",
+      "unit": "apply+undo",
+      "ops": 40,
+      "seconds": 2.7e-05,
+      "per_op_us": 0.672,
+      "per_second": 1488316.7,
+      "checksum": "f296867839c8befa"
+    },
+    {
+      "name": "voronoi",
+      "phase": "midgame",
+      "unit": "évaluation",
+      "ops": 20,
+      "seconds": 0.000659,
+      "per_op_us": 32.968,
+      "per_second": 30332.3,
+      "checksum": "b0d5c3620d7ca0cf"
+    },
+    {
+      "name": "composite",
+      "phase": "midgame",
+      "unit": "caractéristiques",
+      "ops": 20,
+      "seconds": 0.00197,
+      "per_op_us": 98.481,
+      "per_second": 10154.3,
+      "checksum": "37cabcc59448a3f1"
+    },
+    {
+      "name": "search",
+      "phase": "midgame",
+      "unit": "décision",
+      "ops": 2,
+      "seconds": 0.000593,
+      "per_op_us": 296.525,
+      "per_second": 3372.4,
+      "checksum": "83de9b4a178ec268",
+      "nodes": 14,
+      "nodes_per_second": 23606.8,
+      "agent": "paranoid(d=2)"
+    },
+    {
+      "name": "mcts",
+      "phase": "midgame",
+      "unit": "simulation",
+      "ops": 60,
+      "seconds": 0.00254,
+      "per_op_us": 42.336,
+      "per_second": 23620.4,
+      "checksum": "e4a18f299e44e916",
+      "nodes": 62,
+      "nodes_per_second": 24407.8,
+      "agent": "mcts(30)"
+    },
+    {
+      "name": "legal_moves",
+      "phase": "partitioned",
+      "unit": "appel",
+      "ops": 20,
+      "seconds": 5e-06,
+      "per_op_us": 0.226,
+      "per_second": 4418912.8,
+      "checksum": "283c8153eb4d2568"
+    },
+    {
+      "name": "apply_undo",
+      "phase": "partitioned",
+      "unit": "apply+undo",
+      "ops": 50,
+      "seconds": 3.4e-05,
+      "per_op_us": 0.672,
+      "per_second": 1488582.6,
+      "checksum": "4ab34cdf3e765ab1"
+    },
+    {
+      "name": "voronoi",
+      "phase": "partitioned",
+      "unit": "évaluation",
+      "ops": 20,
+      "seconds": 0.000509,
+      "per_op_us": 25.458,
+      "per_second": 39281.0,
+      "checksum": "259ac7b9a7a46481"
+    },
+    {
+      "name": "composite",
+      "phase": "partitioned",
+      "unit": "caractéristiques",
+      "ops": 20,
+      "seconds": 0.001652,
+      "per_op_us": 82.616,
+      "per_second": 12104.3,
+      "checksum": "a4a11a9f7e04c76b"
+    },
+    {
+      "name": "search",
+      "phase": "partitioned",
+      "unit": "décision",
+      "ops": 2,
+      "seconds": 0.000495,
+      "per_op_us": 247.465,
+      "per_second": 4041.0,
+      "checksum": "0a3b84d62f47ed9a",
+      "nodes": 16,
+      "nodes_per_second": 32327.9,
+      "agent": "paranoid(d=2)"
+    },
+    {
+      "name": "mcts",
+      "phase": "partitioned",
+      "unit": "simulation",
+      "ops": 60,
+      "seconds": 0.001093,
+      "per_op_us": 18.21,
+      "per_second": 54915.3,
+      "checksum": "e3b6bace8909e2a8",
+      "nodes": 62,
+      "nodes_per_second": 56745.8,
+      "agent": "mcts(30)"
+    },
+    {
+      "name": "legal_moves",
+      "phase": "endgame",
+      "unit": "appel",
+      "ops": 20,
+      "seconds": 5e-06,
+      "per_op_us": 0.233,
+      "per_second": 4298302.0,
+      "checksum": "bf02828557c37b1e"
+    },
+    {
+      "name": "apply_undo",
+      "phase": "endgame",
+      "unit": "apply+undo",
+      "ops": 50,
+      "seconds": 3.2e-05,
+      "per_op_us": 0.631,
+      "per_second": 1585942.2,
+      "checksum": "57fb0303e4a6845c"
+    },
+    {
+      "name": "voronoi",
+      "phase": "endgame",
+      "unit": "évaluation",
+      "ops": 20,
+      "seconds": 0.000526,
+      "per_op_us": 26.281,
+      "per_second": 38049.7,
+      "checksum": "5d09ebdb2dbc9542"
+    },
+    {
+      "name": "composite",
+      "phase": "endgame",
+      "unit": "caractéristiques",
+      "ops": 20,
+      "seconds": 0.001784,
+      "per_op_us": 89.185,
+      "per_second": 11212.6,
+      "checksum": "e839e2beb52a90ed"
+    },
+    {
+      "name": "search",
+      "phase": "endgame",
+      "unit": "décision",
+      "ops": 2,
+      "seconds": 0.000653,
+      "per_op_us": 326.27,
+      "per_second": 3064.9,
+      "checksum": "e13ea2fdb15f5d7a",
+      "nodes": 18,
+      "nodes_per_second": 27584.5,
+      "agent": "paranoid(d=2)"
+    },
+    {
+      "name": "mcts",
+      "phase": "endgame",
+      "unit": "simulation",
+      "ops": 60,
+      "seconds": 0.001337,
+      "per_op_us": 22.288,
+      "per_second": 44866.3,
+      "checksum": "41aa45efbbe7adcd",
+      "nodes": 42,
+      "nodes_per_second": 31406.4,
+      "agent": "mcts(30)"
+    },
+    {
+      "name": "results_write",
+      "phase": "all",
+      "unit": "ligne",
+      "ops": 100,
+      "seconds": 0.001683,
+      "per_op_us": 16.831,
+      "per_second": 59412.5,
+      "checksum": "f09b496c4831ef7b"
+    },
+    {
+      "name": "render",
+      "phase": "all",
+      "unit": "image",
+      "ops": 8,
+      "seconds": 0.000421,
+      "per_op_us": 52.679,
+      "per_second": 18982.7,
+      "checksum": "4cebc6c1e7034249"
+    }
+  ]
+}

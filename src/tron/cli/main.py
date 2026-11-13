@@ -7,7 +7,7 @@ import statistics
 import sys
 import tempfile
 import time
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 
 from tron import __version__
@@ -164,6 +164,95 @@ def cmd_replay(args: argparse.Namespace) -> int:
 
 # ------------------------------------------------------------------ bench
 def cmd_bench(args: argparse.Namespace) -> int:
+    """Mesures historiques, suite reproductible (``--suite``), profil, campagnes (P13)."""
+    import json  # noqa: PLC0415
+
+    from tron.benchmarks import runner  # noqa: PLC0415
+
+    if args.campaign is not None:
+        rows = runner.bench_campaign(args.campaign, args.workers, args.limit)
+        if args.out is not None:
+            runner.write_json({"format": "tron-bench-campaign/1", "rows": rows}, args.out)
+        if args.format == "json":
+            print(json.dumps(rows, indent=2, ensure_ascii=False))
+        else:
+            print(
+                f"{'processus':>9}{'parties':>9}{'durée s':>10}{'CPU s':>9}{'parties/s':>11}"
+                f"{'RSS max Mo':>12}"
+            )
+            for r in rows:
+                print(
+                    f"{r['workers']:>9}{r['games']:>9}{r['wall_s']:>10.2f}{r['cpu_s']:>9.2f}"
+                    f"{r['games_per_s']:>11.2f}{r['max_rss_mb']:>12.1f}"
+                )
+        return 0
+    if args.suite:
+        params = runner.SuiteParams.quick_params() if args.quick else runner.SuiteParams()
+        changes = {
+            "grid": args.grid,
+            "players": args.players,
+            "per_phase": args.per_phase,
+            "seed": args.seed,
+            "agent": args.agent,
+            "depth": args.depth,
+            "simulations": args.simulations,
+            "repeats": args.repeats,
+        }
+        params = runner.SuiteParams(
+            **{**params.__dict__, **{k: v for k, v in changes.items() if v is not None}}
+        )
+        holder: dict[str, object] = {}
+
+        def work() -> None:
+            holder["result"] = runner.run_suite(params)
+
+        report = None
+        if args.profile:
+            report = _profiled(work, args)
+        else:
+            work()
+        result = holder["result"]
+        assert isinstance(result, dict)
+        if args.out is not None:
+            runner.write_json(result, args.out)
+        comparison = None
+        if args.reference is not None:
+            reference = json.loads(Path(args.reference).read_text(encoding="utf-8"))
+            comparison = runner.compare(result, reference)
+        if args.format == "json":
+            payload: dict[str, object] = {"suite": result}
+            if comparison is not None:
+                payload["comparison"] = comparison
+            if report is not None:
+                payload["profile"] = report
+            print(json.dumps(payload, indent=2, ensure_ascii=False))
+        else:
+            print(runner.suite_text(result))
+            if comparison is not None:
+                print(runner.comparison_text(comparison))
+        return 0
+    if args.profile:
+        report = _profiled(lambda: _bench_classic(args), args)
+        if args.format == "json":
+            print(json.dumps({"profile": report}, indent=2, ensure_ascii=False))
+        return 0
+    return _bench_classic(args)
+
+
+def _profiled(work: Callable[[], object], args: argparse.Namespace) -> list[dict[str, object]]:
+    """Exécute ``work`` sous ``cProfile`` ; texte affiché (format text) et lignes renvoyées."""
+    from tron.benchmarks.runner import profile  # noqa: PLC0415
+
+    text, rows, stats = profile(work, limit=args.top)
+    if args.profile_out is not None:
+        stats.dump_stats(str(args.profile_out))
+    if args.format == "text":
+        print(text)
+    return rows
+
+
+def _bench_classic(args: argparse.Namespace) -> int:
+    """Mesures historiques : évaluations d'heuristique et décisions sur des positions aléatoires."""
     import random  # noqa: PLC0415
 
     from tron.agents.base import make_agent  # noqa: PLC0415
@@ -173,27 +262,31 @@ def cmd_bench(args: argparse.Namespace) -> int:
     from tron.sim.match import ensure_warmup  # noqa: PLC0415
 
     ensure_warmup()
-    rng = random.Random(args.seed)
+    grid = args.grid or 20
+    players = args.players or 4
+    agent_name = args.agent or "paranoid"
+    depth = args.depth or 10
+    seed = args.seed or 0
+    rng = random.Random(seed)
     config = GameConfig.from_dict(
         {
-            "grid": args.grid,
-            "seed": args.seed,
+            "grid": grid,
+            "seed": seed,
             "placement": {"mode": "regular", "rotate": True},
             "heuristic": {"name": args.heuristic},
             "players": [
-                {"name": f"J{i}", "agent": args.agent, "depth": args.depth}
-                for i in range(args.players)
+                {"name": f"J{i}", "agent": agent_name, "depth": depth} for i in range(players)
             ],
         }
     )
     print(
-        f"tron {__version__} · noyaux : {backend_name()} · grille {args.grid}x{args.grid} · "
-        f"{args.players} joueurs · heuristique {args.heuristic}"
+        f"tron {__version__} · noyaux : {backend_name()} · grille {grid}x{grid} · "
+        f"{players} joueurs · heuristique {args.heuristic}"
     )
 
     def midgame(fill: float) -> GameState:
         st = GameState(config.with_seed(rng.randrange(1 << 30)))
-        target = int(fill * args.grid * args.grid)
+        target = int(fill * grid * grid)
         while st.n_moves < target and not st.is_terminal():
             moves = st.legal_moves()
             if not moves:
@@ -202,7 +295,7 @@ def cmd_bench(args: argparse.Namespace) -> int:
         return st
 
     st = midgame(args.fill)
-    heur = make_heuristic(config.heuristic, args.grid, args.grid, args.players)
+    heur = make_heuristic(config.heuristic, grid, grid, players)
     # Voronoi : mesure historique sur ``counts`` (comparabilité avec les mesures de référence).
     evaluate = heur.counts if isinstance(heur, VoronoiHeuristic) else heur.shares
     evaluate(st)
@@ -219,7 +312,7 @@ def cmd_bench(args: argparse.Namespace) -> int:
         st = midgame(rng.uniform(0.05, 0.35))
         if st.is_terminal() or len(st.legal_moves()) < 2:
             continue
-        agent = make_agent(args.agent, st.current, config, depth=args.depth)
+        agent = make_agent(agent_name, st.current, config, depth=depth)
         dec = agent.choose_move(st)
         times.append(dec.stats.time)
         nodes.append(dec.stats.nodes)
@@ -227,7 +320,7 @@ def cmd_bench(args: argparse.Namespace) -> int:
     med = statistics.median(times)
     total_nodes = sum(nodes)
     print(
-        f"{args.agent} profondeur {args.depth} : décision médiane {1000 * med:.1f} ms, "
+        f"{agent_name} profondeur {depth} : décision médiane {1000 * med:.1f} ms, "
         f"moyenne {1000 * statistics.fmean(times):.1f} ms, max {1000 * max(times):.1f} ms, "
         f"{statistics.fmean(nodes):,.0f} nœuds/décision, {total_nodes / sum(times):,.0f} nœuds/s"
     )
@@ -431,18 +524,32 @@ def build_parser() -> argparse.ArgumentParser:
     viz_options(p)
     p.set_defaults(func=cmd_replay)
 
-    p = sub.add_parser("bench", help="mesure les performances (Voronoi, décisions)")
-    p.add_argument("--grid", type=int, default=20)
-    p.add_argument("--players", type=int, default=4)
-    p.add_argument("--agent", default="paranoid")
-    p.add_argument("--depth", type=int, default=10)
+    p = sub.add_parser("bench", help="mesure les performances (Voronoi, décisions, suite)")
+    p.add_argument("--grid", type=int, help="taille de grille (défaut : 20)")
+    p.add_argument("--players", type=int, help="nombre de joueurs (défaut : 4)")
+    p.add_argument("--agent", help="agent de recherche mesuré (défaut : paranoid)")
+    p.add_argument("--depth", type=int, help="profondeur (défaut : 10, suite : 3)")
     p.add_argument("--evals", type=int, default=20_000)
     p.add_argument("--decisions", type=int, default=20)
     p.add_argument("--fill", type=float, default=0.2, help="taux de remplissage pour Voronoi")
-    p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--seed", type=int, help="graine (défaut : 0)")
     p.add_argument(
         "--heuristic", default="voronoi", help="heuristique mesurée (voronoi, composite…)"
     )
+    p.add_argument("--suite", action="store_true", help="suite reproductible par composant")
+    p.add_argument("--quick", action="store_true", help="suite réduite (essais rapides)")
+    p.add_argument("--per-phase", type=int, help="positions par phase (suite, défaut : 5)")
+    p.add_argument("--simulations", type=int, help="simulations MCTS (suite, défaut : 200)")
+    p.add_argument("--repeats", type=int, help="répétitions par position (suite, défaut : 200)")
+    p.add_argument("--format", choices=("text", "json"), default="text")
+    p.add_argument("--out", type=Path, help="écrit le résultat JSON dans ce fichier")
+    p.add_argument("--reference", type=Path, help="compare à un résultat JSON de référence")
+    p.add_argument("--profile", action="store_true", help="profil cProfile de la mesure")
+    p.add_argument("--top", type=int, default=25, help="fonctions affichées par le profil")
+    p.add_argument("--profile-out", type=Path, help="fichier pstats (snakeviz, pstats)")
+    p.add_argument("--campaign", type=Path, help="plan : temps et mémoire selon les processus")
+    p.add_argument("--workers", type=int, nargs="+", default=[1, 2], help="processus mesurés")
+    p.add_argument("--limit", type=int, default=8, help="parties jouées par campagne mesurée")
     p.set_defaults(func=cmd_bench)
 
     p = sub.add_parser("run", help="exécute un plan d'expériences")

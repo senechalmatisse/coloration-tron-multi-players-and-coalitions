@@ -1,0 +1,21 @@
+{
+  "format": "tron-bench-campaign/1",
+  "rows": [
+    {
+      "workers": 1,
+      "games": 48,
+      "wall_s": 1.076,
+      "cpu_s": 1.043,
+      "games_per_s": 44.617,
+      "max_rss_mb": 43.8
+    },
+    {
+      "workers": 2,
+      "games": 48,
+      "wall_s": 0.677,
+      "cpu_s": 1.103,
+      "games_per_s": 70.919,
+      "max_rss_mb": 43.3
+    }
+  ]
+}
