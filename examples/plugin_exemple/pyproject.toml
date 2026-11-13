@@ -1,0 +1,21 @@
+# Extension externe d'exemple (P12) : un agent et une heuristique declares par
+# entry points, sans modifier le depot Tron.
+#   pip install -e examples/plugin_exemple
+#   tron plugins list
+#   tron play examples/plugin_exemple/partie.yaml --no-gui
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tron-plugin-exemple"
+version = "0.1.0"
+description = "Extension d'exemple pour Tron : agent prudent et heuristique centre"
+requires-python = ">=3.12"
+dependencies = ["tron"]
+
+[project.entry-points."tron.agents"]
+prudent = "tron_plugin_exemple:PrudentAgent"
+
+[project.entry-points."tron.heuristics"]
+centre = "tron_plugin_exemple:CenterHeuristic"

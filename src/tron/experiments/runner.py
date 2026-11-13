@@ -26,6 +26,7 @@ import tron
 from tron.core.config import GameConfig
 from tron.experiments.plan import Plan, Task
 from tron.experiments.store import ResultStore
+from tron.plugins import plugin_report
 from tron.sim.match import Match, MatchObserver, ensure_warmup
 from tron.sim.recorder import LOG_FORMAT, Recorder
 from tron.sim.result import METRICS_VERSION, environment_info
@@ -133,6 +134,7 @@ def run_plan(
             "log_format": LOG_FORMAT,
             "metrics": METRICS_VERSION if plan.metrics else None,
         },
+        "plugins": [i.to_dict() for i in plugin_report() if i.loaded],
         "limitations": plan_limitations(tasks),
         "metrics_version": METRICS_VERSION if plan.metrics else None,
         "started": datetime.now(UTC).isoformat(timespec="seconds"),

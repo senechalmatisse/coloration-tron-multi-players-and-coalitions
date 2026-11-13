@@ -39,3 +39,9 @@ __all__ = [
     "voronoi_kernel",
     "warmup",
 ]
+
+# Extensions installées (P12) : chargées une fois, après toutes les heuristiques intégrées.
+from tron.plugins import HEURISTIC_GROUP as _HEURISTIC_GROUP
+from tron.plugins import load_plugins as _load_plugins
+
+_load_plugins(_HEURISTIC_GROUP)

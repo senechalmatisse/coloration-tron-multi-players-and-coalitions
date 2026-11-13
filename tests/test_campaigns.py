@@ -109,6 +109,7 @@ def test_run_resume_manifest_and_analysis(tmp_path: Path) -> None:
     assert len(rows) == 12 and len({(r["condition"], r["game"]) for r in rows}) == 12
     manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["factors"] == {"ablate": ["none", "safety", "mobility"], "k": [1], "grid": [7]}
+    assert manifest["plugins"] == []  # extensions chargées (P12) : aucune ici
     assert {"code", "log_format", "metrics"} <= set(manifest["versions"])
     assert manifest["conditions"] == 3 and manifest["limitations"] == []
     res = analyze(out / "results.csv", out / "an")

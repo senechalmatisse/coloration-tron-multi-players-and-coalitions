@@ -304,7 +304,13 @@ def make_agent(name: str, player: int, config: GameConfig, **params: Any) -> Age
     try:
         cls = AGENTS[name]
     except KeyError:
-        raise ConfigError(f"agent inconnu : {name} (connus : {sorted(AGENTS)})") from None
+        hint = ""
+        if ":" in name or "." in name or "/" in name:
+            hint = (
+                " ; un chemin de module n'est jamais chargé depuis une configuration : "
+                "déclarer un entry point tron.agents (docs/extensions.md)"
+            )
+        raise ConfigError(f"agent inconnu : {name} (connus : {sorted(AGENTS)}){hint}") from None
     try:
         return cls(player, config, **params)
     except TypeError as exc:

@@ -364,6 +364,33 @@ def cmd_evaluate_model(args: argparse.Namespace) -> int:
     return 0
 
 
+# ---------------------------------------------------------------- plugins
+def cmd_plugins(args: argparse.Namespace) -> int:
+    from tron.plugins import GROUPS, plugin_report  # noqa: PLC0415
+
+    infos = plugin_report()
+    rows = [(i.group, i.name, i.distribution, i.target, i.status, i.detail) for i in infos]
+    if args.all:
+        from tron.agents.base import AGENTS  # noqa: PLC0415
+        from tron.eval.base import HEURISTICS  # noqa: PLC0415
+
+        owned = {(i.group, i.name) for i in infos if i.loaded}
+        registries: tuple[dict[str, type], ...] = (dict(AGENTS), dict(HEURISTICS))
+        for group, registry in zip(GROUPS, registries, strict=True):
+            for name, cls in sorted(registry.items()):
+                if (group, name) not in owned:
+                    target = f"{cls.__module__}:{cls.__qualname__}"
+                    rows.append((group, name, "tron (intégré)", target, "builtin", ""))
+    if not rows:
+        print(f"aucune extension installée (groupes {', '.join(GROUPS)})")
+        return 0
+    header = ("groupe", "nom", "paquet", "classe", "état", "détail")
+    widths = [max(len(str(r[k])) for r in [header, *rows]) for k in range(len(header))]
+    for r in [header, *rows]:
+        print("  ".join(str(v).ljust(w) for v, w in zip(r, widths, strict=True)).rstrip())
+    return 0 if all(i.loaded for i in infos) else 1
+
+
 # ----------------------------------------------------------------- parser
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="tron", description="Tron multi-joueur et coalitions")
@@ -460,6 +487,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--seed", type=int, default=0, help="graine des parties d'évaluation")
     p.add_argument("--out", type=Path, help="dossier du tableau evaluation.csv")
     p.set_defaults(func=cmd_evaluate_model)
+
+    p = sub.add_parser("plugins", help="extensions installées (agents, heuristiques)")
+    plugins = p.add_subparsers(dest="plugins_command", required=True)
+    q = plugins.add_parser("list", help="nom, paquet, classe et état des extensions")
+    q.add_argument("--all", action="store_true", help="inclut les éléments intégrés")
+    q.set_defaults(func=cmd_plugins)
     return parser
 
 

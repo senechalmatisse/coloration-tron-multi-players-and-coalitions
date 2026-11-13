@@ -52,8 +52,14 @@ def make_heuristic(
     try:
         cls = HEURISTICS[spec.name]
     except KeyError:
+        hint = ""
+        if any(ch in spec.name for ch in ":./"):
+            hint = (
+                " ; un chemin de module n'est jamais chargé depuis une configuration : "
+                "déclarer un entry point tron.heuristics (docs/extensions.md)"
+            )
         raise ValueError(
-            f"heuristique inconnue : {spec.name} (connues : {sorted(HEURISTICS)})"
+            f"heuristique inconnue : {spec.name} (connues : {sorted(HEURISTICS)}){hint}"
         ) from None
     params = {**spec.params, **overrides}
     try:

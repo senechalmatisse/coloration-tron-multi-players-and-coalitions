@@ -1,0 +1,8 @@
+# Partie utilisant l'extension d'exemple (apres pip install -e examples/plugin_exemple).
+name: plugin_exemple
+grid: 12
+seed: 5
+heuristic: centre
+players:
+  - {name: prudent, team: A, agent: prudent, bonus_centre: 0.1}
+  - {name: glouton, team: B, agent: greedy}

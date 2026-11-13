@@ -76,3 +76,9 @@ __all__ = [
     "tactical_intent",
     "two_camp_reduction",
 ]
+
+# Extensions installées (P12) : chargées une fois, après tous les agents intégrés.
+from tron.plugins import AGENT_GROUP as _AGENT_GROUP
+from tron.plugins import load_plugins as _load_plugins
+
+_load_plugins(_AGENT_GROUP)
