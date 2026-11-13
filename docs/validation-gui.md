@@ -54,6 +54,22 @@ tron replay /tmp/ffa4/game_0000.jsonl
 | `tron play configs/games/hunters_prey_12x12.yaml` | fin « (objectif de survie atteint) » ou victoire des chasseurs | ☐ |
 | `tron replay /tmp/ffa4/game_0000.jsonl --gif /tmp/p.gif --mp4 /tmp/p.mp4` | fichiers lisibles, mêmes images que la fenêtre | ☐ |
 
-## 6. Compte rendu
+## 6. Comparaison de rejeux
+
+```bash
+tron play configs/games/ffa4_20x20.yaml --no-gui --out /tmp/a
+tron play configs/games/ffa4_20x20.yaml --no-gui --out /tmp/b --seed 1
+tron compare /tmp/a/game_0000.jsonl /tmp/b/game_0000.jsonl
+```
+
+| Vérification | Attendu | OK |
+|---|---|---|
+| ouverture | deux plateaux côte à côte, panneau de comparaison, avertissement « comparaison non appariée : graines différentes » | ☐ |
+| `→` / `←`, `Début` / `Fin`, `Espace`, `↑` / `↓` | les deux plateaux avancent et reculent ensemble ; la partie la plus courte se fige (cadre gris) | ☐ |
+| lignes de temps | marques d'événements sous chaque plateau, curseur qui suit le demi-coup | ☐ |
+| `V` | territoires sur les deux plateaux | ☐ |
+| `Échap` | fermeture propre | ☐ |
+
+## 7. Compte rendu
 
 Consigner, dans la demande de fusion ou la note de version : l'environnement noté au § 1, les cases cochées, et pour chaque écart une capture (`S`) et la commande exacte. Un écart bloquant (fenêtre qui ne s'ouvre pas, touche sans effet, plantage) empêche la publication d'une version qui modifie `tron.viz`.

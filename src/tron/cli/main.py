@@ -1,4 +1,4 @@
-"""Commande ``tron`` (F7.4) : play, replay, bench, run, analyze, train, resume-checkpoint…"""
+"""Commande ``tron`` (F7.4) : play, replay, compare, bench, run, analyze, train, config…"""
 
 from __future__ import annotations
 
@@ -481,6 +481,39 @@ def cmd_evaluate_model(args: argparse.Namespace) -> int:
     return 0
 
 
+# ---------------------------------------------------------------- compare
+def cmd_compare(args: argparse.Namespace) -> int:
+    import json  # noqa: PLC0415
+
+    from tron.sim.recorder import GameLog  # noqa: PLC0415
+    from tron.viz.comparison import ComparisonSession, describe  # noqa: PLC0415
+
+    session = ComparisonSession(GameLog.load(args.log_a), GameLog.load(args.log_b))
+    session.seek(session.max_ply if args.ply is None else args.ply)
+    if args.png is not None or args.gif is not None:
+        from tron.viz.export import export_animation, save_png  # noqa: PLC0415
+
+        cell = args.cell or 10
+        if args.png is not None:
+            print(f"image : {save_png(session.frame(cell), args.png)}")
+        if args.gif is not None:
+            frames = session.frames(cell, every=args.every)
+            print(f"animation : {export_animation(frames, args.gif, fps=args.fps)}")
+    if not session.pairing.paired:
+        print(f"attention : {session.pairing.warning}", file=sys.stderr)
+    if args.no_gui:
+        if args.format == "json":
+            print(json.dumps(describe(session), indent=2, ensure_ascii=False))
+        else:
+            print(session.text())
+        return 0
+    from tron.viz.comparison_app import run_compare  # noqa: PLC0415 - fenêtre à la demande
+
+    session.seek(0 if args.ply is None else args.ply)
+    run_compare(session, cell=args.cell, speed=args.speed)
+    return 0
+
+
 # ---------------------------------------------------------- configuration
 def cmd_config_validate(args: argparse.Namespace) -> int:
     from tron.cli.config_tools import check  # noqa: PLC0415
@@ -682,6 +715,20 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--seed", type=int, default=0, help="graine des parties d'évaluation")
     p.add_argument("--out", type=Path, help="dossier du tableau evaluation.csv")
     p.set_defaults(func=cmd_evaluate_model)
+
+    p = sub.add_parser("compare", help="compare deux rejeux côte à côte (P17)")
+    p.add_argument("log_a", type=Path, help="premier journal JSONL")
+    p.add_argument("log_b", type=Path, help="second journal JSONL")
+    p.add_argument("--ply", type=int, help="demi-coup affiché (défaut : début, fin sans fenêtre)")
+    p.add_argument("--cell", type=int, help="taille d'une case en pixels")
+    p.add_argument("--speed", type=float, default=10, help="demi-coups par seconde")
+    p.add_argument("--no-gui", action="store_true", help="panneau de comparaison en texte")
+    p.add_argument("--format", choices=("text", "json"), default="text")
+    p.add_argument("--png", type=Path, help="image côte à côte au demi-coup affiché")
+    p.add_argument("--gif", type=Path, help="animation côte à côte de toute la comparaison")
+    p.add_argument("--fps", type=float, default=10, help="images par seconde de l'animation")
+    p.add_argument("--every", type=int, default=1, help="une image tous les N demi-coups")
+    p.set_defaults(func=cmd_compare)
 
     from tron.cli.config_tools import KINDS, TEMPLATES  # noqa: PLC0415
 

@@ -56,7 +56,7 @@ markers = [
 
 [tool.coverage.run]
 source = ["tron"]
-omit = ["src/tron/viz/arcade_app.py"]
+omit = ["src/tron/viz/arcade_app.py", "src/tron/viz/comparison_app.py"]
 
 [tool.ruff]
 line-length = 100
@@ -73,6 +73,7 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["PLR2004", "PLC0415"]
 "src/tron/viz/arcade_app.py" = ["PLC0415"]
+"src/tron/viz/comparison_app.py" = ["PLC0415"]
 
 [tool.mypy]
 python_version = "3.14"

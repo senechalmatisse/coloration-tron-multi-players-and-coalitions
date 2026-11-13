@@ -33,6 +33,7 @@ tron play configs/games/solo_vs_3_20x20.yaml                          # fenêtre
 tron play configs/games/ffa4_20x20.yaml --no-gui --games 10 --out results/ffa4
 tron replay results/ffa4/game_0000.jsonl                              # rejeu avant / arrière
 tron replay results/ffa4/game_0000.jsonl --gif partie.gif --voronoi   # export
+tron compare results/ffa4/game_0000.jsonl results/ffa4/game_0001.jsonl  # deux rejeux synchronisés
 tron play configs/games/duel_20x20.yaml --no-gui --checkpoint sauvegarde.json --stop-after 40
 tron resume-checkpoint sauvegarde.json                                # reprise exacte
 tron run configs/plans/pilote.yaml --workers 8                        # campagne (reprise automatique)
