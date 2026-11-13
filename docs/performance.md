@@ -90,3 +90,12 @@ pytest -m load
 ```
 
 Ils vérifient sur de grandes instances que les agents rendent l'état intact et jouent un coup légal (Paranoid profondeur 3 sur 40×40 à 8 joueurs et profondeur 4 sur 60×60 à 4 joueurs, MCTS à 3 000 simulations sur 30×30), jouent une mêlée complète à 8 joueurs sur 30×30 et une partie 50×50 à 8 joueurs, et mesurent une campagne à 1 et 2 processus (environ 20 s en Python pur).
+
+## 6. Options de recherche (P16)
+
+```bash
+tron bench --variants --grid 16 --players 2 --agent paranoid --depth 10
+tron bench --variants --grid 20 --players 4 --agent maxn --depth 4 --variant history --variant territory
+```
+
+Compare, sur un jeu de positions déterministe, chaque variante d'options de recherche à la recherche de référence (`plain`) : nœuds, coupes, évaluations de tri, re-recherches, temps, et accord sur le meilleur coup, les coups ex aequo et les valeurs exactes. Le code de sortie vaut 1 si une variante exacte s'écarte de la référence. Résultats et décisions : `docs/algorithmes.md`, § 7.1.

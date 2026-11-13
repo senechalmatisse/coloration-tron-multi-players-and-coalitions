@@ -123,6 +123,44 @@ Le profil Paranoid correspond exactement à la propriété 2 de l'article (c_ii 
   - clé de Zobrist : cases occupées, têtes des joueurs vivants, ensemble des vivants, joueur au trait ;
   - une table par agent, donc par matrice W ;
   - seul le meilleur coup est mémorisé, pour le tri, ce qui préserve l'exactitude. Les transpositions vraies sont rares en Tron : chaque trajet laisse un mur différent.
+  - dans les modes à règles (P09), la clé inclut aussi le tour, les scores et les obstacles.
+
+### 7.1 Optimisation contrôlée (P16)
+
+**Options.** Toutes sont réglables par joueur dans le YAML et désactivées par défaut, sauf les réglages historiques de Paranoid (`history`, approfondissement itératif, table).
+
+| Option | Valeurs | Moteurs | Exactitude |
+|---|---|---|---|
+| `ordering` | `static`, `history`, `mobility` (cases libres autour de la case visée), `territory` (part de l'heuristique après le coup, nœuds de profondeur restante ≥ 2) | tous | exacte : ne change que l'ordre d'exploration |
+| `tt` | booléen | tous | exacte : la table ne mémorise qu'un coup suggéré, retenu seulement s'il est légal |
+| `iterative_deepening` | booléen | tous | exacte |
+| `aspiration` | demi-largeur δ > 0 | alpha-bêta itératif | exacte (re-recherche) |
+| `reduction` | 0, 1, 2 plies | alpha-bêta | **inexacte**, expérimentale |
+
+**Pourquoi ces options sont exactes.** L'alpha-bêta renvoie la valeur exacte d'un nœud dont la valeur est strictement dans sa fenêtre, une borne sinon ; l'ordre des fils ne change ni la valeur racine ni l'ensemble des coups racine exacts, seulement les coupes. À la racine, un coup n'est déclaré exact (valeur affichée, candidat au départage) que si sa valeur est strictement dans la fenêtre de sa dernière recherche. Avec l'aspiration, le premier coup est cherché dans (v − δ, v + δ) autour de la valeur de l'itération précédente et les suivants dans (meilleur − EPS, v + δ) ; une sortie par le haut, ou par le bas pour le premier coup, est re-cherchée avec une fenêtre ouverte de ce côté : valeurs exactes, coups ex aequo et meilleur coup sont ceux de la recherche sans fenêtre. Une collision de clé de Zobrist ne peut que proposer un mauvais coup en premier : la clé n'est jamais une preuve d'égalité d'états, et aucune valeur n'est réutilisée.
+
+**MaxN.** Aucun élagage profond n'est ajouté : le changement de décision d'un joueur intermédiaire peut changer le vecteur remonté à la racine (§ 3). Les tris et la table ne modifient que l'ordre des fils ; l'élagage superficiel (Korf, borne de SOS sur le simplexe) garde ses conditions. Les réductions ne s'appliquent jamais à MaxN.
+
+**Réduction des coups tardifs** (`reduction: R`) : à partir du troisième fils d'un nœud de profondeur restante ≥ 3, recherche à profondeur − 1 − R, puis complète seulement si le résultat améliore la fenêtre. Elle peut manquer une suite tactique : sur les positions mesurées, la valeur exacte d'un coup racine diffère dans 1 position sur 8 (duel, profondeur 10) à 2 sur 8 (4 joueurs, profondeur 5). À n'utiliser que pour des essais.
+
+**Vérifications** (`tests/test_search_optimizations.py`) : pour chaque option exacte, même valeur racine, mêmes coups ex aequo et mêmes valeurs exactes qu'une recherche **sans élagage** (alpha-bêta : duels profondeur 6, trois joueurs profondeur 5 ; MaxN et social α = 0,5 : profondeur 3), sur des positions des quatre phases ; fenêtres d'aspiration minuscules (δ = 10⁻⁶) qui forcent des re-recherches ; tables où toutes les clés entrent en collision ou qui proposent toujours le même coup ; restauration de l'état après une erreur en pleine recherche ; validation des paramètres. La suite de mesures (P13) vérifie en outre que les décisions par défaut sont inchangées (sommes de contrôle).
+
+**Mesures** (`tron bench --variants`, Python pur, positions de `position_set(…, per_phase=2, seed=0)`, un agent neuf par position, rapports au cas `plain` : tri N, E, S, O, sans table ni itérations) :
+
+| Variante | Paranoid duel 16×16, prof. 10 (nœuds / temps) | Paranoid 4 joueurs 20×20, prof. 8 | MaxN 4 joueurs 20×20, prof. 4 |
+|---|---|---|---|
+| `history` | 0,62 / 0,54 | 0,84 / 0,82 | 1,00 / 1,34 |
+| `mobility` | 1,10 / 1,12 | 0,90 / 0,84 | 0,98 / 1,14 |
+| `territory` | 0,56 / 1,39 | 0,66 / 1,12 | 0,98 / 1,61 |
+| `tt` seule | 1,00 / 1,00 | 1,00 / 0,93 | 1,00 / 1,00 |
+| itératif + `tt` | 0,85 / 0,69 | 0,74 / 0,56 | 1,56 / 1,57 |
+| `history` + itératif + `tt` (Paranoid par défaut) | 0,83 / 0,72 | 0,73 / 0,57 | 1,56 / 1,65 |
+| aspiration δ = 0,05 | 0,85 / 0,69 | 0,73 / 0,56 | – |
+| `reduction: 1` (inexacte) | 0,91 / 0,89 | 0,98 / 1,02 | – |
+
+Toutes les variantes exactes ont reproduit, sur toutes les positions, le meilleur coup, les coups ex aequo et les valeurs racine exactes de la référence.
+
+**Décisions.** Les réglages par défaut ne changent pas : celui de Paranoid (`history` + itératif + `tt`) est le meilleur ou presque dans les deux configurations, et l'approfondissement itératif est de toute façon nécessaire à `time_limit`. `territory` réduit le plus le nombre de nœuds mais coûte une évaluation heuristique par fils : plus lent en Python pur, il pourrait devenir rentable avec les noyaux Numba (à mesurer). `mobility` n'aide pas en duel. L'aspiration n'apporte rien de mesurable ici (valeurs stables d'une itération à l'autre, les coupes supplémentaires sont rares). Pour MaxN, l'élagage superficiel est presque toujours inactif à 4 joueurs : les tris n'y changent rien et l'itératif coûte 57 % de nœuds en plus sans limite de temps. Les arbres mesurés restent petits (quelques centaines à quelques milliers de nœuds par décision ; 0,06 s au total pour MaxN) : les écarts de temps inférieurs à 10 %, et tous ceux de la colonne MaxN à nœuds égaux, relèvent du bruit de mesure.
 
 ## 8. MCTS multijoueur à utilité vectorielle (P04)
 

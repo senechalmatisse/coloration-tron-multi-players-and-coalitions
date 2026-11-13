@@ -48,6 +48,8 @@ class SearchAgent(Agent):
         pruning: bool = True,
         time_limit: float | None = None,
         forced_shortcut: bool = True,
+        aspiration: float | None = None,
+        reduction: int = 0,
         **kwargs: Any,
     ) -> None:
         super().__init__(player, config, **kwargs)
@@ -60,6 +62,8 @@ class SearchAgent(Agent):
                 tt=self.DEFAULT_TT if tt is None else tt,
                 pruning=pruning,
                 time_limit=time_limit,
+                aspiration=aspiration,
+                reduction=reduction,
             )
         except ValueError as exc:
             raise ConfigError(str(exc)) from exc

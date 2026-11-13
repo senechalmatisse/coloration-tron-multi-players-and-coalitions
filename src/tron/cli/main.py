@@ -186,6 +186,30 @@ def cmd_bench(args: argparse.Namespace) -> int:
                     f"{r['games_per_s']:>11.2f}{r['max_rss_mb']:>12.1f}"
                 )
         return 0
+    if args.variants:
+        from tron.benchmarks.positions import position_set  # noqa: PLC0415
+        from tron.benchmarks.variants import (  # noqa: PLC0415
+            VARIANTS,
+            compare_variants,
+            variants_text,
+        )
+
+        positions = position_set(
+            args.grid or 20, args.players or 4, args.per_phase or 2, args.seed or 0
+        )
+        names = args.variant or list(VARIANTS)
+        rows = compare_variants(
+            positions, agent=args.agent or "paranoid", depth=args.depth or 6, variants=names
+        )
+        if args.out is not None:
+            runner.write_json({"format": "tron-bench-variants/1", "rows": rows}, args.out)
+        if args.format == "json":
+            print(json.dumps(rows, indent=2, ensure_ascii=False))
+        else:
+            print(variants_text(rows))
+        exact = [r for r in rows if r["exact"]]
+        n = len(positions)
+        return 0 if all(r["same_ties"] == n and r["same_exact_values"] == n for r in exact) else 1
     if args.suite:
         params = runner.SuiteParams.quick_params() if args.quick else runner.SuiteParams()
         changes = {
@@ -608,6 +632,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--top", type=int, default=25, help="fonctions affichées par le profil")
     p.add_argument("--profile-out", type=Path, help="fichier pstats (snakeviz, pstats)")
     p.add_argument("--campaign", type=Path, help="plan : temps et mémoire selon les processus")
+    p.add_argument("--variants", action="store_true", help="options de recherche comparées (P16)")
+    p.add_argument(
+        "--variant", action="append", help="variante à comparer (répétable, défaut : toutes)"
+    )
     p.add_argument("--workers", type=int, nargs="+", default=[1, 2], help="processus mesurés")
     p.add_argument("--limit", type=int, default=8, help="parties jouées par campagne mesurée")
     p.set_defaults(func=cmd_bench)
