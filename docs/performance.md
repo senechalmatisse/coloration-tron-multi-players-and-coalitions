@@ -4,10 +4,10 @@ Toutes les mesures se reproduisent avec `tron bench`. La compilation JIT est exc
 
 ## 1. Heuristiques (P01)
 
-Commande, pour chaque taille de grille G, nombre de joueurs N et heuristique H :
+Commande, pour chaque taille de grille (`--grid`), nombre de joueurs (`--players`) et heuristique (`--heuristic`) du tableau, par exemple :
 
 ```bash
-tron bench --grid G --players N --heuristic H --agent maxn --depth 2 --evals 400 --decisions 5
+tron bench --grid 20 --players 4 --heuristic composite --agent maxn --depth 2 --evals 400 --decisions 5
 ```
 
 Position mesurée : partie aléatoire remplie à 20 % (graine 0). Mesures en **Python pur** (sans Numba, Python 3.13, 2 cœurs), temps moyen d'une évaluation :

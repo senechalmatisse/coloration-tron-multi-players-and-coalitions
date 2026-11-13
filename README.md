@@ -1,22 +1,22 @@
 # Tron multi-joueur et coalitions
 
-Simulateur de Tron sans joueur humain (2 à 8 joueurs, grille de 5 × 5 à 100 × 100, tour par tour) avec :
+Simulateur de Tron sans joueur humain (2 à 8 joueurs, grille de 5 × 5 à 100 × 100, tour par tour) pour étudier la recherche multi-agents et les coalitions :
 
-- des agents de recherche : aléatoire, glouton, Negamax, Paranoid, MaxN ;
-- une extension aux équipes inspirée de SOS (*Socially Oriented Search*) ;
-- une visualisation arcade en temps réel et en rejeu ;
-- une campagne d'expériences reproductible et parallèle ;
-- l'analyse statistique des résultats.
+- agents : aléatoire, glouton, Negamax, Paranoid, MaxN, préférences sociales (SOS), MCTS, agent adaptatif à modèle d'adversaires, politique apprise ;
+- heuristiques : Voronoi, composite (territoire, mobilité, sorties, marge, passages), contrôle de zone ;
+- coalitions statiques ou dynamiques (diplomatie tactique : propositions, alliances, ruptures, trahisons) ;
+- modes de jeu : classique, survie individuelle, contrôle de zone, obstacles dynamiques, équipes asymétriques ;
+- visualisation Arcade en temps réel et en rejeu, explication des décisions, exports GIF / MP4 ;
+- campagnes d'expériences reproductibles et parallèles, sauvegarde et reprise de partie, analyse statistique ;
+- environnement d'apprentissage par renforcement, API Python publique, extensions par *entry points*.
 
 <p align="center">
   <img src="./assets/demo.gif" alt="Démonstration partie" width="700">
 </p>
 
-La pile cible est **Python 3.14** et **arcade 3.3.3**. NumPy et Numba servent au calcul, matplotlib et imageio aux figures et aux exports, pandas, SciPy et statsmodels à l'analyse.
+La pile cible est **Python 3.14** et **Arcade 3.3.3**. NumPy et Numba servent au calcul, matplotlib et imageio aux figures et aux exports, pandas, SciPy et statsmodels à l'analyse.
 
 ## Installation
-
-Une seule commande, au choix :
 
 ```bash
 uv sync --extra dev                     # crée .venv avec Python 3.14 (fichier .python-version)
@@ -24,45 +24,40 @@ uv sync --extra dev                     # crée .venv avec Python 3.14 (fichier 
 python3.14 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 ```
 
-Numba compile le parcours en largeur au premier appel, puis le met en cache dans `__pycache__`. Pour déboguer en Python pur : `NUMBA_DISABLE_JIT=1`. Le code fonctionne
-aussi sans Numba (même résultat, plus lentement).
+Numba compile les noyaux au premier appel et les met en cache. Pour déboguer en Python pur : `NUMBA_DISABLE_JIT=1` (même résultat, plus lentement). L'extra `learning` ajoute Gymnasium pour l'adaptateur facultatif de l'environnement d'apprentissage.
 
-## Démarrage rapide
+## Commandes principales
 
 ```bash
-(source .venv/bin/activate)
-
-tron play configs/games/solo_vs_3_20x20.yaml                                        # fenêtre arcade, temps réel
+tron play configs/games/solo_vs_3_20x20.yaml                          # fenêtre Arcade, temps réel
 tron play configs/games/ffa4_20x20.yaml --no-gui --games 10 --out results/ffa4
-tron replay results/ffa4/game_0000.jsonl                                            # rejeu (avant / arrière)
-tron replay results/ffa4/game_0000.jsonl --gif partie.gif --voronoi
-tron bench --grid 20 --players 4 --agent paranoid --depth 10                        # performances
-tron run configs/plans/pilote.yaml --workers 8                                      # campagne (reprise automatique)
-tron analyze results/pilote/results.csv                                             # tableaux, tests, figures
+tron replay results/ffa4/game_0000.jsonl                              # rejeu avant / arrière
+tron replay results/ffa4/game_0000.jsonl --gif partie.gif --voronoi   # export
+tron play configs/games/duel_20x20.yaml --no-gui --checkpoint sauvegarde.json --stop-after 40
+tron resume-checkpoint sauvegarde.json                                # reprise exacte
+tron run configs/plans/pilote.yaml --workers 8                        # campagne (reprise automatique)
+tron run configs/plans/heuristic_comparison.yaml --pilot              # variante pilote d'un plan
+tron analyze results/pilote/results.csv                               # tableaux, tests, figures
+tron bench --suite                                                    # mesures par composant
+tron train configs/training/linear_duel.yaml --out models/linear_duel # apprentissage
+tron config validate configs/games/*.yaml                             # validation des YAML
+tron config template campaign --out mon_plan.yaml                     # modèle commenté
+tron agents list                                                      # agents et paramètres
+tron heuristics list
+tron plugins list                                                     # extensions installées
 ```
 
-Touches de la fenêtre :
-
-| Touche | Action |
-|---|---|
-| `Espace` | pause / lecture |
-| `→` / `←` | demi-coup suivant / précédent (le retour arrière n'existe qu'en rejeu) |
-| `↑` / `↓` | vitesse |
-| `V` | surcouche des territoires de Voronoi |
-| `N` | nouvelle partie (temps réel) ou retour au début (rejeu) |
-| `Début` / `Fin` | début / fin du rejeu |
-| `S` | capture d'écran |
-| `Échap` | quitter |
+Touches de la fenêtre : `Espace` pause, `→` / `←` demi-coup suivant / précédent (retour arrière en rejeu), `↑` / `↓` vitesse, `V` territoires de Voronoi, `D` panneau de décision, `N` nouvelle partie, `Début` / `Fin` (rejeu), `S` capture, `Échap` / `Q` quitter.
 
 ## Configuration d'une partie
 
 ```yaml
 name: solo_vs_3
-grid: 20                                                                                # ou [largeur, hauteur], ou {width, height}
-seed: 3                                                                                 # tout l'aléa dérive de cette graine
+grid: 20                                         # ou [largeur, hauteur], ou {width, height}
+seed: 3                                          # tout l'aléa dérive de cette graine
 first_player: 0
-placement: {mode: regular, radius: 0.35, rotate: true}                                  # regular | random | manual
-heuristic: {name: voronoi, tie: order, separation: false}
+placement: {mode: regular, radius: 0.35, rotate: true}
+heuristic: {name: voronoi, tie: order}           # voronoi | composite | zone
 players:
   - {name: solo, team: solo, agent: paranoid, depth: 8}
   - {name: c1, team: coalition, agent: social, depth: 3, profile: team, alpha: 1.0}
@@ -70,101 +65,53 @@ players:
   - {name: c3, team: coalition, agent: social, depth: 3, profile: team, alpha: 1.0}
 ```
 
-Un joueur sans `team` forme sa propre équipe. Les clés autres que `name`, `team`, `agent` et `depth` sont transmises à l'agent. La clé `defaults` s'applique à tous les joueurs.
+Un joueur sans `team` forme sa propre équipe ; les autres clés du joueur sont transmises à l'agent (`tron agents list`) et `defaults` s'applique à tous les joueurs. Les règles (`rules`), la diplomatie (`diplomacy`) et les modes de jeu sont décrits dans les documents ci-dessous. `tron config template game|teams|dynamic|zone|campaign|training` crée un point de départ commenté, `tron config validate` le vérifie et `tron config show` affiche sa forme normalisée.
 
-| Agent | Algorithme | Paramètres principaux |
-|---|---|---|
-| `random` | coup sûr tiré au hasard | – |
-| `greedy` | profondeur 1, maximise sa part de territoire | `tie_break` |
-| `negamax` | negamax alpha-bêta, deux joueurs (référence) | `depth` |
-| `paranoid` | alpha-bêta deux camps : tous contre la racine | `depth`, `rounds`, `ordering`, `iterative_deepening`, `tt`, `time_limit` |
-| `maxn` | MaxN avec élagage superficiel de Korf | `depth`, `pruning` |
-| `social` | matrice de préférences W (SOS) | `profile` (`maxn`, `paranoid`, `team`, `team_paranoid`, `custom`), `alpha`, `matrix`, `engine` (`auto`, `alphabeta`, `maxn`) |
+## API Python
 
-Paramètres communs : `depth` (plies) ou `rounds` (tours complets : rounds × joueurs vivants), et `tie_break` (`random`, tiré avec la graine, ou `fixed`, ordre N, E, S, O).
+```python
+from tron.api import load_game_config, run_game, run_games, load_replay
 
-## Plans d'expériences
-
-```yaml
-name: etude_a
-scenario: solo_vs_coalition                                                 # solo_vs_coalition | teams | custom
-games: 100                                                                  # parties par condition
-seed: 2026                                                                  # graines appariées entre conditions
-seats: cyclic                                                               # chaque graine est jouée avec chaque premier joueur
-base: {coalition_mode: team, alpha: 1.0, depth_unit: plies}
-factors:
-  solo_depth: [1, 2, 4, 6, 8, 10]
-  coalition_depth: [1, 2, 3, 4]
-  k: [1, 2, 3, 4, 5]
-  grid: [10, 20, 40]
-design: full                                                                # ou {type: subset, n: 60, seed: 1}, ou {type: list, ...}
-key_conditions: {games: 200, where: [{grid: 20, coalition_depth: 2}]}
+result = run_game(load_game_config("configs/games/duel_20x20.yaml"), seed=3, log="partie.jsonl")
+results = run_games("configs/games/teams_2v2_20x20.yaml", games=20, workers=4)
+final = load_replay("partie.jsonl").final_state()
 ```
 
-Fichiers fournis dans `configs/plans/` :
+Exemples exécutables dans `examples/` (partie, campagne, rejeu, agent personnalisé, extension installable).
 
-- `etude_a.yaml` : 360 conditions, soit 39 000 parties ;
-- `etude_a_cooperation.yaml` : coordination de la coalition et algorithme du solitaire ;
-- `etude_b.yaml` : équipes contre équipes ;
-- `pilote.yaml` : 1 152 parties, environ une minute.
+## Documentation
 
-`tron run` écrit `results.csv` (une ligne par partie, avec la graine, le hash Git et les versions) et `manifest.json`. Une relance reprend là où l'exécution s'était arrêtée.
-Options utiles : `--estimate N` (budget de calcul estimé sur N parties), `--limit`, `--logs` (journaux JSONL de chaque partie), `--dry-run`.
-
-## Analyse
-
-`tron analyze results.csv` produit :
-
-- `summary.csv` : taux de victoire, intervalle de Wilson à 95 %, niveau du hasard |équipe|/n, rang moyen, durée, nœuds et temps par décision ;
-- `paired.csv` : profondeurs consécutives comparées sur les mêmes parties (test exact de McNemar, correction de Holm) ;
-- `regression.txt` : régression logistique de la victoire, erreurs standard groupées par ; statsmodels si disponible, sinon repli NumPy ;
-- les figures : taux de victoire selon la profondeur (une courbe par k, un panneau par grille), cartes de chaleur des deux profondeurs, coût de calcul.
-
-Le notebook `notebooks/analyse.ipynb` reprend les mêmes étapes de façon interactive.
-
-## Architecture
-
-```
-src/tron/
-  core/         configuration, état (apply / undo sans copie, Zobrist), placement, graines
-  eval/         Voronoi (BFS compatible Numba), valeur des feuilles
-  agents/       moteurs de recherche, agents, préférences sociales (SOS)
-  sim/          Match + observateurs, journal JSONL, rejeu, arène
-  experiments/  plans YAML, scénarios, exécution parallèle avec reprise, CSV
-  viz/          palette, rendu NumPy, contrôle de lecture, exports, fenêtre arcade
-  analysis/     statistiques, figures, régression
-  cli/          commande tron
-```
-
-Chaque couche ne dépend que de celles du dessous : `cli` → `viz`, `experiments`, `analysis` → `sim` → `agents` → `eval` → `core`. Le moteur fonctionne sans affichage.
-
-Documents détaillés :
-
-- [`docs/architecture.md`](docs/architecture.md) : schémas d'architecture et de flux ;
-- [`docs/algorithmes.md`](docs/algorithmes.md) : codage des valeurs, moteurs, élagages, réduction à deux camps, confrontation avec SOS ;
-- [`docs/exigences.md`](docs/exigences.md) : traçabilité entre exigences, code et tests.
+| Document | Contenu |
+|---|---|
+| [`docs/architecture.md`](docs/architecture.md) | couches, flux, schémas |
+| [`docs/algorithmes.md`](docs/algorithmes.md) | valeurs, moteurs, élagages, réduction à deux camps, MCTS |
+| [`docs/agents.md`](docs/agents.md) | contrat d'un agent, agents fournis, modèle d'adversaires |
+| [`docs/heuristiques.md`](docs/heuristiques.md) | contrat `shares`, Voronoi, composite |
+| [`docs/coalitions-dynamiques.md`](docs/coalitions-dynamiques.md) | protocole diplomatique et limites |
+| [`docs/modes-de-jeu.md`](docs/modes-de-jeu.md) | survie, contrôle de zone, obstacles, équipes asymétriques |
+| [`docs/metriques.md`](docs/metriques.md) | métriques de coopération |
+| [`docs/experiences.md`](docs/experiences.md) | créer un plan, lancer, reprendre, analyser |
+| [`docs/sauvegardes.md`](docs/sauvegardes.md) | sauvegarde et reprise de partie |
+| [`docs/visualisation.md`](docs/visualisation.md), [`docs/validation-gui.md`](docs/validation-gui.md) | rejeu, explications, validation de la fenêtre |
+| [`docs/performance.md`](docs/performance.md) | mesures, profilage, Numba, tests de charge |
+| [`docs/learning.md`](docs/learning.md) | environnement d'apprentissage et entraînement |
+| [`docs/api.md`](docs/api.md), [`docs/extensions.md`](docs/extensions.md) | API publique, extensions externes |
+| [`docs/integration-continue.md`](docs/integration-continue.md) | intégration continue |
+| [`docs/exigences.md`](docs/exigences.md) | traçabilité exigences, code, tests |
 
 ## Qualité
 
 ```bash
-pytest                                                      # 82 tests (jalons J1 à J5 compris)
-pytest --cov=tron                                           # couverture (cible : 80 % sur core, eval, agents)
+pytest                                       # suite complète (tests de charge exclus)
+NUMBA_DISABLE_JIT=1 pytest                   # mêmes tests en Python pur
+pytest -m load                               # tests de charge
+pytest --cov=tron.core --cov=tron.eval --cov=tron.agents --cov-fail-under=80
 ruff check src tests && ruff format --check src tests
 mypy src
-NUMBA_DISABLE_JIT=1 pytest                                  # mêmes tests en Python pur
 ```
 
-Tests de validation des algorithmes :
-
-- l'alpha-bêta donne la même valeur racine et les mêmes coups ex aequo qu'un minimax sans élagage ;
-- MaxN donne le même résultat avec et sans élagage superficiel ;
-- à deux joueurs, Negamax, Paranoid, MaxN et SOS sont d'accord ;
-- `SocialAgent` reproduit Paranoid (profil Paranoid) et MaxN (profil Équipe, α = 0) ;
-- la borne d'élagage généralisée est vérifiée contre `scipy.optimize.linprog`.
+Les mêmes vérifications tournent en intégration continue (`.github/workflows/ci.yml`).
 
 ## Reproductibilité
 
-À configuration et graine identiques, une partie est identique coup pour coup, quel que soit l'ordonnancement des processus.
-Les temps de compilation JIT sont exclus des mesures (chaque processus préchauffe les noyaux avant de jouer).
-
-Une limite : la limite de temps de réflexion optionnelle (`time_limit`) rend les parties dépendantes de la machine. Elle est désactivée par défaut et ne doit pas servir aux campagnes.
+À configuration et graine identiques, une partie est identique coup pour coup, quel que soit l'ordonnancement des processus ; tout l'aléa passe par `tron.core.rng`. Les temps de compilation JIT sont exclus des mesures. La limite de temps de réflexion facultative (`time_limit`) rend les parties dépendantes de la machine : désactivée par défaut, elle ne doit pas servir aux campagnes.

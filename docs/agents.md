@@ -1,5 +1,7 @@
 # Agents
 
+`tron agents list` affiche les agents disponibles (intégrés et extensions) avec leurs paramètres ; pour distribuer un agent dans un paquet séparé, voir `docs/extensions.md`.
+
 ## 1. Contrat d'un agent
 
 Un agent hérite de `tron.agents.base.Agent` et s'enregistre sous un nom avec `@register_agent`. Le nom est celui de la clé `agent` du YAML ; les autres clés du joueur (sauf `name`, `team`, `depth`) sont passées au constructeur.
@@ -67,6 +69,7 @@ Règles :
 | `social` | matrice de préférences W (SOS) | `profile` (`maxn`, `paranoid`, `team`, `team_paranoid`, `custom`, `dynamic_team`), `alpha`, `matrix`, `engine`, `diplomacy`, `break_margin` |
 | `mcts` | MCTS / UCT multijoueur à utilité vectorielle (P04) | `simulations`, `exploration`, `rollout_policy`, `rollout_depth`, `time_limit`, `profile`, `alpha` |
 | `adaptive` | modèle d'adversaires et ajustement borné des poids (P05) | `adaptation_rate`, `observation_window`, `fallback_agent`, `fallback_profile`, `min_confidence`, `cooperation_threshold`, `diplomacy` |
+| `learned` | politique linéaire apprise sur les états après coup (P10, `docs/learning.md`) | `model` (fichier `model.json`), `epsilon` |
 
 Paramètres communs : `depth` (plies) ou `rounds` (tours complets : rounds × joueurs vivants), `tie_break` (`random` ou `fixed`).
 

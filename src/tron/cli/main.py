@@ -457,6 +457,66 @@ def cmd_evaluate_model(args: argparse.Namespace) -> int:
     return 0
 
 
+# ---------------------------------------------------------- configuration
+def cmd_config_validate(args: argparse.Namespace) -> int:
+    from tron.cli.config_tools import check  # noqa: PLC0415
+
+    failures = 0
+    for path in args.files:
+        try:
+            checked = check(path, args.kind)
+        except ConfigError as exc:
+            failures += 1
+            print(f"invalide : {path} : {exc}")
+            continue
+        print(f"valide : {path} : {checked.summary}")
+    return 1 if failures else 0
+
+
+def cmd_config_show(args: argparse.Namespace) -> int:
+    from tron.cli.config_tools import check, dump, normalized  # noqa: PLC0415
+
+    print(dump(normalized(check(args.file, args.kind)), args.format), end="")
+    return 0
+
+
+def cmd_config_template(args: argparse.Namespace) -> int:
+    from tron.cli.config_tools import write_template  # noqa: PLC0415
+
+    text = write_template(args.kind, args.out, force=args.force)
+    if args.out is None or str(args.out) == "-":
+        print(text, end="")
+    else:
+        print(f"modèle {args.kind} écrit dans {args.out}")
+    return 0
+
+
+def cmd_agents_list(args: argparse.Namespace) -> int:
+    import json  # noqa: PLC0415
+
+    from tron.cli.config_tools import agent_catalog, catalog_text  # noqa: PLC0415
+
+    rows = agent_catalog()
+    if args.format == "json":
+        print(json.dumps(rows, indent=2, ensure_ascii=False))
+    else:
+        print(catalog_text(rows, f"{len(rows)} agents :"))
+    return 0
+
+
+def cmd_heuristics_list(args: argparse.Namespace) -> int:
+    import json  # noqa: PLC0415
+
+    from tron.cli.config_tools import catalog_text, heuristic_catalog  # noqa: PLC0415
+
+    rows = heuristic_catalog()
+    if args.format == "json":
+        print(json.dumps(rows, indent=2, ensure_ascii=False))
+    else:
+        print(catalog_text(rows, f"{len(rows)} heuristiques :"))
+    return 0
+
+
 # ---------------------------------------------------------------- plugins
 def cmd_plugins(args: argparse.Namespace) -> int:
     from tron.plugins import GROUPS, plugin_report  # noqa: PLC0415
@@ -594,6 +654,39 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--seed", type=int, default=0, help="graine des parties d'évaluation")
     p.add_argument("--out", type=Path, help="dossier du tableau evaluation.csv")
     p.set_defaults(func=cmd_evaluate_model)
+
+    from tron.cli.config_tools import KINDS, TEMPLATES  # noqa: PLC0415
+
+    p = sub.add_parser("config", help="valide, normalise ou crée des configurations YAML")
+    cfg_sub = p.add_subparsers(dest="config_command", required=True)
+    q = cfg_sub.add_parser("validate", help="valide des fichiers (partie, plan, entraînement)")
+    q.add_argument("files", type=Path, nargs="+")
+    q.add_argument("--kind", choices=KINDS, default="auto", help="type (défaut : reconnu)")
+    q.set_defaults(func=cmd_config_validate)
+    q = cfg_sub.add_parser("show", help="affiche la configuration normalisée")
+    q.add_argument("file", type=Path)
+    q.add_argument("--kind", choices=KINDS, default="auto")
+    q.add_argument("--format", choices=("yaml", "json"), default="yaml")
+    q.set_defaults(func=cmd_config_show)
+    q = cfg_sub.add_parser("template", help="crée un modèle de configuration commenté")
+    q.add_argument("kind", choices=sorted(TEMPLATES), help="type de modèle")
+    q.add_argument("--out", type=Path, help="fichier à écrire (défaut : sortie standard)")
+    q.add_argument("--force", action="store_true", help="écrase un fichier existant")
+    q.set_defaults(func=cmd_config_template)
+
+    p = sub.add_parser("agents", help="agents disponibles")
+    q = p.add_subparsers(dest="agents_command", required=True).add_parser(
+        "list", help="agents et paramètres"
+    )
+    q.add_argument("--format", choices=("text", "json"), default="text")
+    q.set_defaults(func=cmd_agents_list)
+
+    p = sub.add_parser("heuristics", help="heuristiques disponibles")
+    q = p.add_subparsers(dest="heuristics_command", required=True).add_parser(
+        "list", help="heuristiques et paramètres"
+    )
+    q.add_argument("--format", choices=("text", "json"), default="text")
+    q.set_defaults(func=cmd_heuristics_list)
 
     p = sub.add_parser("plugins", help="extensions installées (agents, heuristiques)")
     plugins = p.add_subparsers(dest="plugins_command", required=True)

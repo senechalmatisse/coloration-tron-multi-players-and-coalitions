@@ -1,5 +1,7 @@
 # Heuristiques d'évaluation
 
+`tron heuristics list` affiche les heuristiques disponibles (intégrées et extensions) avec leurs paramètres ; l'heuristique `zone` du contrôle de zone est décrite dans `docs/modes-de-jeu.md`.
+
 Une heuristique évalue un état **non terminal** par un vecteur de parts h, une composante par joueur. Les états terminaux sont traités à part par `Valuation` (voir `docs/algorithmes.md`, §1).
 
 ## 1. Contrat `shares`
