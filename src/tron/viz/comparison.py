@@ -23,7 +23,7 @@ import numpy as np
 from tron.eval.voronoi import VoronoiHeuristic
 from tron.sim.recorder import GameLog
 from tron.viz.controller import ReplaySource
-from tron.viz.palette import Palette, make_palette
+from tron.viz.palette import Palette, hex_to_rgb, make_palette
 from tron.viz.render import render_frame
 
 
@@ -156,6 +156,7 @@ class ComparisonSession:
         self.logs = (log_a, log_b)
         self.labels = (labels[0], labels[1])
         self.sources = (ReplaySource(log_a), ReplaySource(log_b))
+        self._neon_cache: dict[tuple[int, int, str], Any] = {}
         self.pairing = pairing(log_a, log_b)
         self.divergence = first_divergence(log_a, log_b)
         self.timelines = (timeline(log_a), timeline(log_b))
@@ -313,15 +314,34 @@ class ComparisonSession:
             make_palette(self.logs[1].config.team_index),
         )
 
-    def frame(self, cell: int = 12, gap: int = 12, voronoi: bool = False) -> np.ndarray:
-        """Image côte à côte des deux plateaux au curseur (hauteurs complétées si besoin)."""
+    def frame(
+        self,
+        cell: int = 12,
+        gap: int = 12,
+        voronoi: bool = False,
+        theme: str = "classic",
+        quality: str = "medium",
+    ) -> np.ndarray:
+        """Image côte à côte des deux plateaux au curseur (hauteurs complétées si besoin).
+
+        ``theme="neon"`` : rendu néon des deux arènes (sans effets animés).
+        """
         images = []
+        neon = theme == "neon"
         for side, pal in enumerate(self.palettes()):
             st = self.sources[side].state
             owners = self.owners(side) if voronoi else None
-            images.append(render_frame(st, pal, cell=cell, owners=owners))
+            if neon:
+                images.append(self._neon(side, cell, quality).render(st, owners=owners))
+            else:
+                images.append(render_frame(st, pal, cell=cell, owners=owners))
         h = max(img.shape[0] for img in images)
-        surface = np.array(self.palettes()[0].surface, dtype=np.uint8)
+        if neon:
+            from tron.viz.theme import BACKGROUND  # noqa: PLC0415
+
+            surface = np.array(hex_to_rgb(BACKGROUND), dtype=np.uint8)
+        else:
+            surface = np.array(self.palettes()[0].surface, dtype=np.uint8)
         padded = []
         for img in images:
             pad = np.empty((h, img.shape[1], 3), dtype=np.uint8)
@@ -329,19 +349,35 @@ class ComparisonSession:
             pad[: img.shape[0]] = img
             padded.append(pad)
         spacer = np.empty((h, gap, 3), dtype=np.uint8)
-        spacer[:] = np.array(self.palettes()[0].grid, dtype=np.uint8)
+        spacer[:] = surface if neon else np.array(self.palettes()[0].grid, dtype=np.uint8)
         return np.concatenate([padded[0], spacer, padded[1]], axis=1)
 
-    def frames(self, cell: int = 12, every: int = 1, hold_end: int = 10) -> list[np.ndarray]:
+    def _neon(self, side: int, cell: int, quality: str) -> Any:
+        """Rendu néon d'un côté, conservé d'une image à l'autre (calques incrémentaux)."""
+        from tron.viz.neon import NeonRenderer  # noqa: PLC0415 - rendu néon à la demande
+
+        key = (side, cell, quality)
+        if key not in self._neon_cache:
+            self._neon_cache[key] = NeonRenderer(self.logs[side].config, cell, quality=quality)
+        return self._neon_cache[key]
+
+    def frames(
+        self,
+        cell: int = 12,
+        every: int = 1,
+        hold_end: int = 10,
+        theme: str = "classic",
+        quality: str = "medium",
+    ) -> list[np.ndarray]:
         """Images successives de toute la comparaison (le curseur revient à sa place)."""
         here = self.ply
         out = []
         for ply in range(0, self.max_ply + 1, max(1, every)):
             self.seek(ply)
-            out.append(self.frame(cell))
+            out.append(self.frame(cell, theme=theme, quality=quality))
         if self.ply != self.max_ply:
             self.seek(self.max_ply)
-            out.append(self.frame(cell))
+            out.append(self.frame(cell, theme=theme, quality=quality))
         out.extend([out[-1]] * hold_end)
         self.seek(here)
         return out

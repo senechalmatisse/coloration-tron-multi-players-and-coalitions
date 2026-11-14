@@ -350,6 +350,15 @@ class GameState:
             return []
         return [self.coords(c) for c in self._rhist[-1][1]]
 
+    @property
+    def history(self) -> Sequence[tuple[int, int, int, int]]:
+        """Demi-coups joués, en lecture seule : ``(joueur, case quittée, case atteinte, clé)``.
+
+        Les cases sont des indices internes (voir :meth:`coords`) ; la case atteinte
+        vaut −1 pour une élimination. Vide pour une copie faite sans historique.
+        """
+        return self._hist
+
     # ---------------------------------------------------------------- outils
     def copy(self, history: bool = True) -> GameState:
         """Copie indépendante ; sans ``history``, les coups antérieurs ne peuvent être défaits."""

@@ -6,7 +6,7 @@ Simulateur de Tron sans joueur humain (2 à 8 joueurs, grille de 5 × 5 à 100 �
 - heuristiques : Voronoi, composite (territoire, mobilité, sorties, marge, passages), contrôle de zone ;
 - coalitions statiques ou dynamiques (diplomatie tactique : propositions, alliances, ruptures, trahisons) ;
 - modes de jeu : classique, survie individuelle, contrôle de zone, obstacles dynamiques, équipes asymétriques ;
-- visualisation Arcade en temps réel et en rejeu, explication des décisions, exports GIF / MP4 ;
+- visualisation Arcade en temps réel et en rejeu, thème néon « Neon Arena » (traces lumineuses, motos, particules, HUD holographique, bloom en qualité `ultra`) ou classique (palette validée pour les daltoniens), explication des décisions, exports GIF / MP4 ;
 - campagnes d'expériences reproductibles et parallèles, sauvegarde et reprise de partie, analyse statistique ;
 - environnement d'apprentissage par renforcement, API Python publique, extensions par *entry points*.
 

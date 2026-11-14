@@ -25,6 +25,7 @@ from tron.eval.voronoi import VoronoiHeuristic
 from tron.sim.match import Match, MoveEvent
 from tron.sim.recorder import GameLog, apply_logged
 from tron.viz.render import pv_path
+from tron.viz.scene import PlyExtras, alliance_pairs, record_extras
 
 UNAVAILABLE = "non disponible"
 END_LABELS = {
@@ -214,6 +215,15 @@ class LiveSource:
     def forward(self) -> MoveEvent | None:
         return self.match.step()
 
+    def extras(self, ply: int) -> PlyExtras:
+        """Direction jouée, diplomatie, zones et obstacles du demi-coup ``ply`` (thème néon)."""
+        events = self.match.events
+        i = ply - (self.state.ply - len(events))
+        if 0 <= i < len(events):
+            e = events[i]
+            return PlyExtras(e.direction, e.diplomacy, e.zone, e.obstacles)
+        return PlyExtras()
+
     def backward(self) -> bool:
         return False
 
@@ -258,6 +268,12 @@ class ReplaySource:
     @property
     def title(self) -> str:
         return f"Rejeu {self.config.name} (graine {self.config.seed})"
+
+    def extras(self, ply: int) -> PlyExtras:
+        """Direction jouée, diplomatie, zones et obstacles du demi-coup ``ply`` (thème néon)."""
+        if 0 <= ply < len(self.log.moves):
+            return record_extras(self.log.moves[ply], self._dirs[ply])
+        return PlyExtras()
 
     def forward(self) -> dict[str, object] | None:
         if self.finished:
@@ -308,6 +324,8 @@ class PlaybackController:
         self._shares: list[float] = []
         self._owners: np.ndarray | None = None
         self._last: dict[int, dict[str, float | int | None]] = {}
+        self._alliance_key: tuple[int, int] | None = None
+        self._alliance_pairs: tuple[tuple[int, int], ...] = ()
 
     # ------------------------------------------------------------- commandes
     @property
@@ -392,6 +410,29 @@ class PlaybackController:
         if panel is None or len(panel.pv) < 2 or st.ply != panel.ply + 1:
             return []
         return pv_path(st, panel.pv[1:])
+
+    # ------------------------------------------------- scène (thème néon)
+    def ply_extras(self, ply: int) -> PlyExtras:
+        """Direction jouée, diplomatie, zones et obstacles du demi-coup ``ply``."""
+        extras = getattr(self.source, "extras", None)
+        return extras(ply) if extras is not None else PlyExtras()
+
+    def alliances(self) -> tuple[tuple[int, int], ...]:
+        """Alliances tactiques actives (diplomatie, P03) dans l'état affiché."""
+        src = self.source
+        if isinstance(src, LiveSource):
+            dip = src.match.diplomacy
+            return dip.snapshot(src.state.ply).active_pairs if dip is not None else ()
+        if isinstance(src, ReplaySource):
+            key = (id(src.log), src.index)
+            if key != self._alliance_key:
+                events = [
+                    ev for rec in src.log.moves[: src.index] for ev in record_extras(rec).diplomacy
+                ]
+                self._alliance_pairs = alliance_pairs(events)
+                self._alliance_key = key
+            return self._alliance_pairs
+        return ()  # pragma: no cover - autre source
 
     def step_forward(self) -> bool:
         event = self.source.forward()

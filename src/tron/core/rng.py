@@ -21,6 +21,8 @@ STREAM_EVAL = 6
 """Graines des parties d'évaluation (P10), disjointes de celles d'entraînement."""
 STREAM_LEARNING = 7
 """Aléa propre à l'environnement d'apprentissage (conversion d'action illégale)."""
+STREAM_EFFECTS = 8
+"""Aléa des effets visuels (particules) : sans aucune influence sur la partie."""
 
 _MASK64 = (1 << 64) - 1
 _MASK63 = (1 << 63) - 1

@@ -193,6 +193,8 @@ def test_cli_compare_text_json_and_exports(
             str(tmp_path / "c.gif"),
             "--cell",
             "6",
+            "--theme",  # dimensions du rendu classique (le néon ajoute un liseré)
+            "classic",
         ]
     )
     assert code == 0

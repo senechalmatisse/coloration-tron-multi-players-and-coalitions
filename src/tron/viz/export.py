@@ -1,4 +1,9 @@
-"""Export d'une partie en GIF ou MP4 et captures PNG (F6.2, F6.4)."""
+"""Export d'une partie en GIF ou MP4 et captures PNG (F6.2, F6.4).
+
+``theme="neon"`` produit les images du thème néon (:mod:`tron.viz.neon`),
+effets animés compris ; ``classic`` (valeur par défaut de la bibliothèque) garde
+le rendu d'origine.
+"""
 
 from __future__ import annotations
 
@@ -13,6 +18,7 @@ from tron.eval.voronoi import VoronoiHeuristic
 from tron.sim.recorder import GameLog
 from tron.viz.palette import Palette, make_palette
 from tron.viz.render import render_frame
+from tron.viz.theme import DEFAULT_QUALITY, Quality, resolve_theme
 
 
 def log_frames(
@@ -22,8 +28,19 @@ def log_frames(
     voronoi: bool = False,
     hold_end: int = 15,
     palette: Palette | None = None,
+    theme: str = "classic",
+    quality: str | Quality = DEFAULT_QUALITY,
+    fps: float = 20.0,
 ) -> Iterator[np.ndarray]:
-    """Images successives d'une partie journalisée (une image tous les ``every`` demi-coups)."""
+    """Images successives d'une partie journalisée (une image tous les ``every`` demi-coups).
+
+    ``theme="neon"`` : rendu néon, effets animés au rythme de ``fps`` images/s.
+    """
+    if resolve_theme(theme) == "neon":
+        from tron.viz.neon import neon_frames  # noqa: PLC0415 - rendu néon à la demande
+
+        yield from neon_frames(log, cell, every, voronoi, hold_end, quality, fps)
+        return
     pal = palette or make_palette(log.config.team_index)
     heur = VoronoiHeuristic(log.config.width, log.config.height, log.config.n_players)
     frame = None

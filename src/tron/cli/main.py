@@ -28,7 +28,15 @@ def cmd_play(args: argparse.Namespace) -> int:
     if not args.no_gui:
         from tron.viz.arcade_app import run_live  # noqa: PLC0415 - fenêtre à la demande
 
-        run_live(config, cell=args.cell, speed=args.speed, voronoi=args.voronoi, paused=args.paused)
+        run_live(
+            config,
+            cell=args.cell,
+            speed=args.speed,
+            voronoi=args.voronoi,
+            paused=args.paused,
+            theme=args.theme,
+            quality=args.quality,
+        )
         return 0
     from tron.sim.arena import run_arena  # noqa: PLC0415
 
@@ -62,7 +70,13 @@ def cmd_play(args: argparse.Namespace) -> int:
             for target in (args.gif, args.mp4):
                 if target:
                     frames = log_frames(
-                        log, cell=args.cell or 12, every=args.every, voronoi=args.voronoi
+                        log,
+                        cell=args.cell or 12,
+                        every=args.every,
+                        voronoi=args.voronoi,
+                        theme=args.theme,
+                        quality=args.quality,
+                        fps=args.fps,
                     )
                     print(f"export : {export_animation(frames, target, fps=args.fps)}")
     finally:
@@ -146,7 +160,15 @@ def cmd_replay(args: argparse.Namespace) -> int:
         if target:
             from tron.viz.export import export_animation, log_frames  # noqa: PLC0415
 
-            frames = log_frames(log, cell=args.cell or 12, every=args.every, voronoi=args.voronoi)
+            frames = log_frames(
+                log,
+                cell=args.cell or 12,
+                every=args.every,
+                voronoi=args.voronoi,
+                theme=args.theme,
+                quality=args.quality,
+                fps=args.fps,
+            )
             print(f"export : {export_animation(frames, target, fps=args.fps)}")
             exported = True
     if args.no_gui or exported:
@@ -158,7 +180,14 @@ def cmd_replay(args: argparse.Namespace) -> int:
         return 0
     from tron.viz.arcade_app import run_replay  # noqa: PLC0415
 
-    run_replay(log, cell=args.cell, speed=args.speed, voronoi=args.voronoi)
+    run_replay(
+        log,
+        cell=args.cell,
+        speed=args.speed,
+        voronoi=args.voronoi,
+        theme=args.theme,
+        quality=args.quality,
+    )
     return 0
 
 
@@ -495,9 +524,10 @@ def cmd_compare(args: argparse.Namespace) -> int:
 
         cell = args.cell or 10
         if args.png is not None:
-            print(f"image : {save_png(session.frame(cell), args.png)}")
+            image = session.frame(cell, theme=args.theme, quality=args.quality)
+            print(f"image : {save_png(image, args.png)}")
         if args.gif is not None:
-            frames = session.frames(cell, every=args.every)
+            frames = session.frames(cell, every=args.every, theme=args.theme, quality=args.quality)
             print(f"animation : {export_animation(frames, args.gif, fps=args.fps)}")
     if not session.pairing.paired:
         print(f"attention : {session.pairing.warning}", file=sys.stderr)
@@ -510,7 +540,7 @@ def cmd_compare(args: argparse.Namespace) -> int:
     from tron.viz.comparison_app import run_compare  # noqa: PLC0415 - fenêtre à la demande
 
     session.seek(0 if args.ply is None else args.ply)
-    run_compare(session, cell=args.cell, speed=args.speed)
+    run_compare(session, cell=args.cell, speed=args.speed, theme=args.theme, quality=args.quality)
     return 0
 
 
@@ -607,7 +637,29 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"tron {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
 
+    def theme_options(p: argparse.ArgumentParser) -> None:
+        from tron.viz.theme import (  # noqa: PLC0415 - sans dépendance graphique
+            DEFAULT_QUALITY,
+            DEFAULT_THEME,
+            QUALITY_NAMES,
+            THEMES,
+        )
+
+        p.add_argument(
+            "--theme",
+            choices=THEMES,
+            default=DEFAULT_THEME,
+            help="rendu néon (défaut) ou classique (palette validée pour les daltoniens)",
+        )
+        p.add_argument(
+            "--quality",
+            choices=QUALITY_NAMES,
+            default=DEFAULT_QUALITY,
+            help="qualité du thème néon : low, medium (défaut) ou ultra (bloom)",
+        )
+
     def viz_options(p: argparse.ArgumentParser) -> None:
+        theme_options(p)
         p.add_argument("--cell", type=int, help="taille d'une case en pixels")
         p.add_argument("--speed", type=float, default=10, help="demi-coups par seconde")
         p.add_argument("--voronoi", action="store_true", help="surcouche des territoires")
@@ -728,6 +780,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--gif", type=Path, help="animation côte à côte de toute la comparaison")
     p.add_argument("--fps", type=float, default=10, help="images par seconde de l'animation")
     p.add_argument("--every", type=int, default=1, help="une image tous les N demi-coups")
+    theme_options(p)
     p.set_defaults(func=cmd_compare)
 
     from tron.cli.config_tools import KINDS, TEMPLATES  # noqa: PLC0415

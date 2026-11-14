@@ -1,6 +1,6 @@
 # Validation de l'interface graphique (P14)
 
-Les tests automatiques ne valident **pas** la fenêtre Arcade : `tests/test_render_headless.py` vérifie l'image NumPy produite par `render_frame` (dimensions, type `uint8`, couleurs des murs, des têtes, des éliminés et des territoires) et `tests/test_viz.py` la logique de la fenêtre avec un bouchon de l'API Arcade (touches, appels de dessin, textes). Le rendu réel (OpenGL, polices, fenêtre, clavier) se valide à la main, sur un poste avec écran, avec la procédure ci-dessous, à chaque version qui touche `tron.viz` ou la version d'Arcade.
+Les tests automatiques ne valident **pas** la fenêtre Arcade : `tests/test_render_headless.py` vérifie l'image NumPy produite par `render_frame` (dimensions, type `uint8`, couleurs des murs, des têtes, des éliminés et des territoires), `tests/test_viz_neon.py` le rendu NumPy néon, et `tests/test_viz.py` et `tests/test_viz_neon_window.py` la logique des fenêtres avec un bouchon de l'API Arcade (touches, appels de dessin, textes, sprites, bloom simulé). L'aperçu simulé de `tests/arcade_preview.py` contrôle la mise en page, pas le rendu OpenGL. Le rendu réel (OpenGL, polices, fenêtre, clavier) se valide à la main, sur un poste avec écran, avec la procédure ci-dessous, à chaque version qui touche `tron.viz` ou la version d'Arcade.
 
 ## 1. Préparation
 
@@ -11,10 +11,10 @@ Les tests automatiques ne valident **pas** la fenêtre Arcade : `tests/test_rend
 ## 2. Essai de fumée
 
 ```bash
-tron play configs/games/solo_vs_3_20x20.yaml
+tron play configs/games/solo_vs_3_20x20.yaml --theme classic
 ```
 
-La fenêtre s'ouvre en moins de quelques secondes (première compilation Numba comprise), la partie se joue en temps réel, le panneau latéral affiche le titre, la ligne d'état, le demi-coup, les joueurs et les équipes, et la partie se termine par « Victoire de l'équipe … ».
+Les § 2 à 6 se valident avec le thème classique (`--theme classic`), le § 7 avec le thème néon (défaut). La fenêtre s'ouvre en moins de quelques secondes (première compilation Numba comprise), la partie se joue en temps réel, le panneau latéral affiche le titre, la ligne d'état, le demi-coup, les joueurs et les équipes, et la partie se termine par « Victoire de l'équipe … ».
 
 ## 3. Touches (temps réel)
 
@@ -70,6 +70,33 @@ tron compare /tmp/a/game_0000.jsonl /tmp/b/game_0000.jsonl
 | `V` | territoires sur les deux plateaux | ☐ |
 | `Échap` | fermeture propre | ☐ |
 
-## 7. Compte rendu
+## 7. Thème néon
+
+```bash
+tron play configs/games/ffa4_20x20.yaml                       # néon, qualité medium
+tron play configs/games/melee_8_30x30.yaml --quality ultra    # 8 joueurs, bloom
+tron play configs/games/diplomacy_4p_20x20.yaml               # alliances tactiques
+tron replay /tmp/ffa4/game_0000.jsonl
+```
+
+| Vérification | Attendu | OK |
+|---|---|---|
+| ouverture | arène sombre centrée verticalement, grille fine, lignes majeures, liseré cyan lumineux ; HUD à droite (titre `TRON // COALITIONS`, cartes des joueurs, statistiques, événements, aide sur trois lignes) sans texte qui déborde | ☐ |
+| traces | lueur continue, sans couture ni point plus clair aux jonctions des cases ni aux virages ; cœur blanc net | ☐ |
+| motos | orientées dans le sens du déplacement, phare à l'avant, halo qui pulse doucement ; numéro du joueur lisible à côté | ☐ |
+| élimination | explosion, onde de choc, éclair bref, léger tremblement (≤ 4 px), trace qui s'éteint en ~0,6 s, croix rouge, ligne `JOUEUR … ÉLIMINÉ · cause` dans le journal | ☐ |
+| fin de partie | gerbe de particules et bandeau `VICTOIRE · …` ; badges `VAINQUEUR` / `VAINCU` ou rang | ☐ |
+| alliances (diplomatie) | lien pointillé animé entre alliés, qui ne masque pas les traces ; ligne `ALLIANCE a + b` ; `A` ajoute les liens entre coéquipiers | ☐ |
+| `V`, `D` | territoires teintés à frontières lumineuses ; losanges de la variante principale et panneau de décision | ☐ |
+| `G` | `low` (halo réduit, pas d'animation de fond), `medium`, `ultra` (bloom) ; ligne « rendu » du HUD à jour | ☐ |
+| `B` en `ultra` | le bloom s'allume et s'éteint ; s'il est indisponible, la ligne « rendu » n'indique pas « bloom » et un avertissement est journalisé, sans plantage | ☐ |
+| `T` | bascule vers le thème classique et retour, partie conservée | ☐ |
+| rejeu : `←`, `Début`, `Fin` | traces retirées et rajoutées sans artefact ; journal élagué au retour arrière ; effets effacés | ☐ |
+| fluidité | ≥ 60 images/s à 8 joueurs (`melee_8_30x30`) en `medium` ; noter le taux en `ultra` | ☐ |
+| zones et obstacles | `zone_control_16x16` : zones teintées de l'équipe qui les tient ; `obstacles_14x14` : blocs sombres au liseré orangé, flash à l'apparition | ☐ |
+| comparaison | `tron compare a.jsonl b.jsonl` : deux arènes néon synchronisées, titres sans chevauchement | ☐ |
+| écran haute densité (Retina, 4K à 200 %) | image nette, bloom et tremblement correctement alignés | ☐ |
+
+## 8. Compte rendu
 
 Consigner, dans la demande de fusion ou la note de version : l'environnement noté au § 1, les cases cochées, et pour chaque écart une capture (`S`) et la commande exacte. Un écart bloquant (fenêtre qui ne s'ouvre pas, touche sans effet, plantage) empêche la publication d'une version qui modifie `tron.viz`.

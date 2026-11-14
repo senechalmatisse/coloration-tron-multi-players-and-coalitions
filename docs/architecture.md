@@ -41,7 +41,7 @@ flowchart TD
 | `benchmarks` | jeux de positions déterministes, suite de mesures par composant, profilage, campagnes |
 | `api`, `plugins` | façade Python stable ; découverte des agents et heuristiques externes |
 | `experiments` | `Plan` (facteurs, plan complet ou partiel, graines appariées, rotation des sièges), scénarios des études A et B, `run_plan` (processus parallèles, reprise), `ResultStore` |
-| `viz` | `Palette` (lisible par les daltoniens), `render_frame` (NumPy), `PlaybackController`, `LiveSource`, `ReplaySource`, exports GIF/MP4, `TronWindow` (arcade 3.3) |
+| `viz` | `Palette` (lisible par les daltoniens), `render_frame` (NumPy), `PlaybackController`, `LiveSource`, `ReplaySource`, exports GIF/MP4, `TronWindow` (arcade 3.3) ; thème néon : `theme`, `scene` (traces et événements visuels), `neon` (tuiles, motos, rendu NumPy), `effects` (particules, bloom), `hud`, `neon_arcade` (sprites Arcade) |
 | `analysis` | Wilson, agrégats, McNemar + Holm, figures matplotlib, régression logistique |
 | `cli` | `tron play`, `replay`, `resume-checkpoint`, `bench`, `run`, `analyze`, `train`, `evaluate-model`, `config`, `agents`, `heuristics`, `plugins` |
 
