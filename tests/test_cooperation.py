@@ -1,4 +1,4 @@
-"""Tests des métriques de coopération, de cohésion et de stabilité (P02)."""
+"""Tests des métriques de coopération, de cohésion et de stabilité."""
 
 from __future__ import annotations
 
@@ -36,7 +36,7 @@ def _team_config():
     )
 
 
-# ------------------------------------------------------------ cas construits
+# cas construits
 def test_two_solo_players_have_neutral_team_metrics() -> None:
     cfg = make_config(5, 5, 2, placement={"positions": [[0, 0], [4, 4]]})
     # J0 : E, J1 : N, J0 : PASS (abandon alors qu'il avait un coup).
@@ -126,7 +126,7 @@ def test_collector_validation() -> None:
         MetricsCollector(make_config(5, 5, 2), territory_every=-1)
 
 
-# ---------------------------------------------------------------- parties
+# parties
 def test_match_metrics_are_deterministic_and_exported() -> None:
     a = Match(_team_config()).run()
     b = Match(_team_config()).run()
@@ -157,7 +157,7 @@ def test_metrics_recomputed_from_log(tmp_path: Path) -> None:
     assert log.result is not None and log.result["metrics"]["teams"] == ["A", "B"]
 
 
-# ---------------------------------------------------------------- analyse
+# analyse
 TINY = {
     "name": "coop",
     "scenario": "solo_vs_coalition",

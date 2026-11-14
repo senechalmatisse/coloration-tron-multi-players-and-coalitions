@@ -1,4 +1,4 @@
-# Coalitions dynamiques : diplomatie tactique (P03)
+# Coalitions dynamiques : diplomatie tactique
 
 Les équipes de la configuration sont **permanentes** : elles déterminent la victoire, les rangs, la fin de partie et le hachage de Zobrist. La diplomatie ajoute des **alliances tactiques souples** qui modifient seulement les préférences sociales (matrice W) des agents qui les exploitent. Le résultat reste attribué à l'équipe permanente définie en YAML.
 

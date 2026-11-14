@@ -77,7 +77,7 @@ def analyze(
     result = AnalysisOutput(summary=summary_path)
     factors = factor_columns(df)
 
-    # Comparaisons appariées : profondeurs consécutives (H1), puis facteurs P06.
+    # Comparaisons appariées : profondeurs consécutives, puis facteurs.
     tables = []
     depth_factor = next((f for f in ("f_solo_depth", "f_depth_t0") if f in factors), None)
     if depth_factor is not None:
@@ -102,7 +102,7 @@ def analyze(
     # Figures des campagnes P06 : niveaux d'un facteur catégoriel, courbes de dose.
     result.figures += _campaign_figures(df, summary, factors, out)
 
-    # Régression logistique (F7.3), étendue aux facteurs P06 qui varient.
+    # Régression logistique, étendue aux facteurs qui varient.
     if formula is not None or "f_solo_depth" in factors or new_terms(prepare(df)):
         try:
             reg = fit_logit(df, formula or default_formula(df))
@@ -113,7 +113,7 @@ def analyze(
             result.regression.write_text(reg.to_text() + "\n", encoding="utf-8")
             reg.table.to_csv(out / "regression.csv", index=False)
 
-    # Métriques de coopération (P02) : absentes d'un CSV antérieur, sans effet sur le reste.
+    # Métriques de coopération : absentes d'un CSV antérieur, sans effet sur le reste.
     if has_metrics(df):
         _cooperation_outputs(df, factors, out, result)
     if has_diplomacy(df):

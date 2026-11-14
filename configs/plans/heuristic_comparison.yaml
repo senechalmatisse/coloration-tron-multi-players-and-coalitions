@@ -1,4 +1,4 @@
-# P06 : heuristique Voronoi contre composite pour le solitaire, memes agents,
+# Heuristique Voronoi contre composite pour le solitaire, memes agents,
 # memes graines (appariees) et memes profondeurs ; la coalition garde Voronoi.
 # Analyse : McNemar apparie composite contre voronoi (f_solo_heuristic), cout
 # par decision (temps, noeuds) et regression logistique.

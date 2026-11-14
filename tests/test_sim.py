@@ -1,4 +1,4 @@
-"""Tests de la simulation, du journal et de l'arène (jalons J1 et J2)."""
+"""Tests de la simulation, du journal et de l'arène."""
 
 from __future__ import annotations
 

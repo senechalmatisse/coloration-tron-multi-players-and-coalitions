@@ -1,4 +1,4 @@
-"""Tests du modèle d'adversaire (P05)."""
+"""Tests du modèle d'adversaire."""
 
 from __future__ import annotations
 

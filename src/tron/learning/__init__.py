@@ -1,4 +1,4 @@
-"""Apprentissage par renforcement (P10) : environnement, caractéristiques, modèle, entraînement.
+"""Apprentissage par renforcement : environnement, caractéristiques, modèle, entraînement.
 
 NumPy suffit : aucun cadre d'apprentissage n'est requis. Les sous-modules sont
 chargés à la demande, pour que l'agent ``learned`` (qui n'a besoin que du modèle

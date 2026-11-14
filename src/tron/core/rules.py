@@ -1,4 +1,4 @@
-"""Règles de partie et modes de jeu (P09).
+"""Règles de partie et modes de jeu.
 
 Les règles sont décrites par la configuration (clé YAML ``rules``), jamais par
 des conditions codées dans les agents. Le mode historique (``classic``) reste le
@@ -6,8 +6,7 @@ mode par défaut : une partie classique se déroule exactement comme avant.
 
 Séparation des responsabilités :
 
-* **déplacements** : inchangés dans tous les modes (``GameState.legal_moves`` et
-  ``apply``) ;
+* **déplacements** : inchangés dans tous les modes (``GameState.legal_moves`` et ``apply``) ;
 * **conditions de victoire** : portée de la victoire (équipe ou joueur) et
   conditions propres au mode (score cible, durée) ;
 * **objectifs secondaires** : décrits par le mode (survie, points de zone).
@@ -418,7 +417,7 @@ class RulesEngine:
         }
         """Équipe de victoire → nombre de tours complets à survivre (P09.4)."""
 
-    # ------------------------------------------------------------ tours
+    # tours
     def round_ended(self, n: int, player: int, nxt: int) -> bool:
         """Vrai si le coup de ``player`` termine un tour complet (depuis le premier joueur)."""
         f = self.first
@@ -525,7 +524,7 @@ class RulesEngine:
             key ^= z.score_key(t, s)
         return key
 
-    # --------------------------------------------------------- victoire
+    # victoire
     def _target_reached(self, state: GameState) -> bool:
         target = self.spec.target_score
         return target is not None and max(state.scores) >= target

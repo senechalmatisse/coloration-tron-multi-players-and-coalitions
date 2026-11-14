@@ -1,4 +1,4 @@
-"""Tests des explications de décision et de leur visualisation (P07)."""
+"""Tests des explications de décision et de leur visualisation."""
 
 from __future__ import annotations
 
@@ -202,7 +202,7 @@ def test_pv_path_and_headless_rendering() -> None:
     assert tuple(plain[1 * 12 + 6, 2 * 12 + 6]) == pal.surface
 
 
-# ------------------------------------------------------- fenêtre (bouchon d'API)
+# fenêtre (mock API)
 class _Stub:
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.args = args

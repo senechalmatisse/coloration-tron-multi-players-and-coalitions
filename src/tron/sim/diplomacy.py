@@ -1,4 +1,4 @@
-"""Diplomatie tactique (P03) : propositions, alliances, ruptures, expirations.
+"""Diplomatie tactique : propositions, alliances, ruptures, expirations.
 
 Règles de la V1 (alliances souples, sans effet sur les règles de victoire) :
 
@@ -62,7 +62,7 @@ class DiplomacyState:
         self._alive = [True] * n_players
         self.events: list[AllianceEvent] = []
 
-    # ------------------------------------------------------------ requêtes
+    # requêtes
     def are_allied(self, a: int, b: int) -> bool:
         return _pair(a, b) in self._active
 
@@ -88,7 +88,7 @@ class DiplomacyState:
             ),
         )
 
-    # ------------------------------------------------------------- actions
+    # actions
     def _check(self, player: int, target: int) -> None:
         n = self.n
         for who in (player, target):
@@ -210,7 +210,7 @@ class DiplomacyState:
 
 @dataclass(frozen=True, slots=True)
 class DiplomacySummary:
-    """Bilan diplomatique d'une partie (métriques P02 étendues par P03)."""
+    """Bilan diplomatique d'une partie."""
 
     proposals: int = 0
     alliances_formed: int = 0
@@ -223,8 +223,8 @@ class DiplomacySummary:
 def summarize_diplomacy(events: Sequence[AllianceEvent], final_ply: int) -> DiplomacySummary:
     """Comptes et durée moyenne des alliances (une alliance encore active dure jusqu'à la fin).
 
-    Les trahisons sont recomptées avec la règle du module, à partir des seuls
-    événements : le bilan d'un journal rejoué est identique au bilan en direct.
+    Les trahisons sont recomptées avec la règle du module, à partir des seuls événements :
+    le bilan d'un journal rejoué est identique au bilan en direct.
     """
     proposals = formed = breaks = betrayals = rejected = 0
     start: dict[tuple[int, int], int] = {}

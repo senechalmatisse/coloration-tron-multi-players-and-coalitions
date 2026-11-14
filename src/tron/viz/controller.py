@@ -1,4 +1,4 @@
-"""Contrôle de lecture, indépendant de la bibliothèque graphique (F6.2, F6.3).
+"""Contrôle de lecture, indépendant de la bibliothèque graphique.
 
 * :class:`LiveSource` : partie en temps réel (un ``Match`` piloté demi-coup par
   demi-coup) ; « nouvelle partie » change de graine et fait tourner le premier joueur.
@@ -69,7 +69,7 @@ class PanelInfo:
 
 @dataclass(frozen=True, slots=True)
 class DecisionPanel:
-    """Dernière décision : coup, statistiques, alternatives, variante principale (P07).
+    """Dernière décision : coup, statistiques, alternatives, variante principale.
 
     Les valeurs que l'agent n'a pas calculées sont affichées « non disponible ».
     """
@@ -327,7 +327,7 @@ class PlaybackController:
         self._alliance_key: tuple[int, int] | None = None
         self._alliance_pairs: tuple[tuple[int, int], ...] = ()
 
-    # ------------------------------------------------------------- commandes
+    # commandes
     @property
     def speed(self) -> float:
         return SPEEDS[self.speed_index]
@@ -347,7 +347,7 @@ class PlaybackController:
     def toggle_decision(self) -> None:
         self.show_decision = not self.show_decision
 
-    # ---------------------------------------------------------- décision (P07)
+    # décision
     def decision_panel(self) -> DecisionPanel | None:
         """Explication de la dernière décision jouée (``None`` avant le premier coup)."""
         src = self.source
@@ -411,7 +411,7 @@ class PlaybackController:
             return []
         return pv_path(st, panel.pv[1:])
 
-    # ------------------------------------------------- scène (thème néon)
+    # scène (thème néon)
     def ply_extras(self, ply: int) -> PlyExtras:
         """Direction jouée, diplomatie, zones et obstacles du demi-coup ``ply``."""
         extras = getattr(self.source, "extras", None)
@@ -485,7 +485,7 @@ class PlaybackController:
                     "depth": event.get("depth"),  # type: ignore[dict-item]
                 }
 
-    # -------------------------------------------------------------- données
+    # données
     def _analyse(self) -> None:
         st = self.source.state
         key = (id(st), st.ply, st.key)
@@ -555,10 +555,10 @@ class PlaybackController:
             status = "Pause"
         else:
             status = f"Lecture ×{self.speed:g}"
-        if cfg.rules.needs_engine:  # règles à état propre (P09) : tour, scores de zone
+        if cfg.rules.needs_engine:  # règles à état propre : tour, scores de zone
             status = f"{status} · tour {st.round}"
         if cfg.rules.zones:
-            scores = " – ".join(
+            scores = " - ".join(
                 f"{name} {score}" for name, score in zip(cfg.victory_names, st.scores, strict=True)
             )
             status = f"{status} · {scores}"

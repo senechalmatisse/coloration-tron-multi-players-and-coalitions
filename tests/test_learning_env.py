@@ -1,4 +1,4 @@
-"""Environnement d'apprentissage, modèle linéaire et entraînement (P10)."""
+"""Environnement d'apprentissage, modèle linéaire et entraînement."""
 
 from __future__ import annotations
 
@@ -65,7 +65,7 @@ def _episode(env: TronEnv, seed: int, policy: Any = _first_legal) -> list[Any]:
     return trace
 
 
-# ------------------------------------------------------------ observations
+# observations
 def test_observation_planes_are_relative_and_consistent() -> None:
     cfg = GameConfig.from_dict(
         {
@@ -114,7 +114,7 @@ def test_reset_and_step_are_reproducible_with_a_seed() -> None:
     assert env.state.to_snapshot() == first  # reset reconstruit les adversaires
 
 
-# ---------------------------------------------------------- actions illégales
+# actions illégales
 def _blocked_action(env: TronEnv) -> int:
     legal = env.legal_actions()
     return next(a for a in range(4) if a not in legal)
@@ -172,7 +172,7 @@ def test_no_legal_move_is_an_automatic_pass() -> None:
     assert seen
 
 
-# -------------------------------------------------------------- récompenses
+# récompenses
 def test_terminal_reward_matches_official_result_and_draws() -> None:
     cfg = _duel()
     for seed in range(6):
@@ -253,7 +253,7 @@ def test_environment_does_not_import_the_gui() -> None:
     assert out.stdout.strip() == "False"
 
 
-# -------------------------------------------------------------------- modèle
+# modèle
 def test_model_export_reload_and_errors(tmp_path: Path) -> None:
     model = LinearModel(np.linspace(-1, 1, len(FEATURE_NAMES)), {"name": "m"})
     path = model.save(tmp_path / "m" / "model.json")
@@ -315,7 +315,7 @@ def test_learned_agent_in_configs(tmp_path: Path) -> None:
             make_agent("learned", 0, cfg, **params)
 
 
-# ------------------------------------------------------------- entraînement
+# entraînement
 def _tiny_spec(**over: Any) -> TrainingSpec:
     data: dict[str, Any] = {
         "name": "tiny",
@@ -435,7 +435,7 @@ def test_cli_train_and_evaluate_model(tmp_path: Path, capsys: pytest.CaptureFixt
     assert main(["evaluate-model", str(tmp_path / "absent.json"), str(DUEL)]) == 2
 
 
-# ------------------------------------------------------- adaptateur Gymnasium
+# adaptateur Gymnasium
 def test_gymnasium_adapter_with_a_stub(monkeypatch: pytest.MonkeyPatch) -> None:
     class Space:
         def __init__(self, *args: Any, **kw: Any) -> None:

@@ -1,4 +1,4 @@
-"""Comparaison synchronisée de deux rejeux (P17), testée sans fenêtre graphique."""
+"""Comparaison synchronisée de deux rejeux, testée sans fenêtre graphique."""
 
 from __future__ import annotations
 
@@ -205,7 +205,7 @@ def test_cli_compare_text_json_and_exports(
     assert (tmp_path / "c.gif").stat().st_size > 0
 
 
-# ------------------------------------------------- fenêtre (bouchon d'Arcade)
+# fenêtre (mock Arcade)
 class _Stub:
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.args = args

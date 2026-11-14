@@ -2,7 +2,7 @@
 
 Toutes les mesures se reproduisent avec `tron bench`. La compilation JIT est exclue des chronométrages : chaque processus préchauffe les noyaux avant de mesurer.
 
-## 1. Heuristiques (P01)
+## 1. Heuristiques
 
 Commande, pour chaque taille de grille (`--grid`), nombre de joueurs (`--players`) et heuristique (`--heuristic`) du tableau, par exemple :
 
@@ -28,7 +28,7 @@ L'heuristique composite coûte environ 2,5 fois Voronoi : elle refait le parcour
 
 Avec Numba, les deux noyaux sont compilés (le noyau composite retombe en Python pur avec un avertissement si la version de Numba installée refuse de le compiler). Les mesures JIT sont à produire avec la même commande sur une machine où Numba est installé.
 
-## 2. Suite reproductible par composant (P13)
+## 2. Suite reproductible par composant
 
 ```bash
 tron bench --suite                                    # 20×20, 4 joueurs, 5 positions par phase
@@ -37,7 +37,7 @@ tron bench --suite --reference benchmarks/reference/suite-python-20x20-4p.json
 tron bench --suite --quick                            # 10×10, 2 joueurs, quelques dixièmes de seconde
 ```
 
-**Positions.** `tron.benchmarks.position_set(grid, players, per_phase, seed)` produit un jeu de positions déterministe en quatre phases : ouverture (2–8 % de cases occupées, tous vivants), milieu de partie (35–50 % de la durée de la partie, joueurs en contact), grille cloisonnée (régions accessibles disjointes) et fin de partie (2·n demi-coups avant la fin). Les phases sont définies par rapport à des parties jouées jusqu'au bout, donc valables pour toutes les tailles de grille ; l'empreinte SHA-256 des positions figure dans chaque résultat.
+**Positions.** `tron.benchmarks.position_set(grid, players, per_phase, seed)` produit un jeu de positions déterministe en quatre phases : ouverture (2-8 % de cases occupées, tous vivants), milieu de partie (35-50 % de la durée de la partie, joueurs en contact), grille cloisonnée (régions accessibles disjointes) et fin de partie (2·n demi-coups avant la fin). Les phases sont définies par rapport à des parties jouées jusqu'au bout, donc valables pour toutes les tailles de grille ; l'empreinte SHA-256 des positions figure dans chaque résultat.
 
 **Mesures séparées**, par phase : génération des coups (`legal_moves`), `apply` + `undo`, Voronoi (`counts`), caractéristiques composites, décisions de recherche (Paranoid profondeur 3 par défaut : temps par décision et nœuds par seconde), simulations MCTS (200 par décision) ; puis écriture de lignes de résultats CSV et rendu d'image (`render_frame`, sans Arcade). Les nombres de positions, de répétitions et les graines sont fixes et enregistrés dans le résultat (`params`) ; les noyaux JIT sont préchauffés avant tout chronométrage, et le noyau utilisé (`environment.backend`) est enregistré : les résultats Python pur et JIT sont séparés.
 
@@ -91,11 +91,11 @@ pytest -m load
 
 Ils vérifient sur de grandes instances que les agents rendent l'état intact et jouent un coup légal (Paranoid profondeur 3 sur 40×40 à 8 joueurs et profondeur 4 sur 60×60 à 4 joueurs, MCTS à 3 000 simulations sur 30×30), jouent une mêlée complète à 8 joueurs sur 30×30 et une partie 50×50 à 8 joueurs, et mesurent une campagne à 1 et 2 processus (environ 20 s en Python pur).
 
-## 6. Options de recherche (P16)
+## 6. Options de recherche
 
 ```bash
 tron bench --variants --grid 16 --players 2 --agent paranoid --depth 10
 tron bench --variants --grid 20 --players 4 --agent maxn --depth 4 --variant history --variant territory
 ```
 
-Compare, sur un jeu de positions déterministe, chaque variante d'options de recherche à la recherche de référence (`plain`) : nœuds, coupes, évaluations de tri, re-recherches, temps, et accord sur le meilleur coup, les coups ex aequo et les valeurs exactes. Le code de sortie vaut 1 si une variante exacte s'écarte de la référence. Résultats et décisions : `docs/algorithmes.md`, § 7.1.
+Compare, sur un jeu de positions déterministe, chaque variante d'options de recherche à la recherche de référence (`plain`) : nœuds, coupes, évaluations de tri, re-recherches, temps, et accord sur le meilleur coup, les coups ex aequo et les valeurs exactes. Le code de sortie vaut 1 si une variante exacte s'écarte de la référence. Résultats et décisions : `docs/algorithmes.md`.

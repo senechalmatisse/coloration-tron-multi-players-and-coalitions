@@ -1,4 +1,4 @@
-"""Stockage incrémental des résultats en CSV, avec reprise (F5.4, F5.5)."""
+"""Stockage incrémental des résultats en CSV, avec reprise."""
 
 from __future__ import annotations
 
@@ -11,9 +11,8 @@ from typing import IO, Any
 class ResultStore:
     """Fichier CSV d'une ligne par partie, écrit au fil de l'eau.
 
-    À l'ouverture, une dernière ligne incomplète (interruption pendant
-    l'écriture) est supprimée ; ``completed()`` liste les parties déjà jouées
-    pour la reprise.
+    À l'ouverture, une dernière ligne incomplète (interruption pendant l'écriture) est supprimée ;
+    ``completed()`` liste les parties déjà jouées pour la reprise.
 
     Reprise d'un fichier écrit par une version antérieure : si ses colonnes sont
     un sous-ensemble des nouvelles (colonnes ajoutées, par exemple les métriques

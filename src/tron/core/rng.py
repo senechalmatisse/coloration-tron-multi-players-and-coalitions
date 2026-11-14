@@ -1,4 +1,4 @@
-"""Gestion des graines (F1.7).
+"""Gestion des graines.
 
 Tout l'aléa d'une partie dérive d'une graine unique, par flux indépendants
 (``numpy.random.SeedSequence``) : placement initial, départage des coups de
@@ -16,9 +16,9 @@ STREAM_AGENT = 2
 STREAM_PLAN = 3
 STREAM_OBSTACLES = 4
 STREAM_TRAIN = 5
-"""Graines des épisodes d'entraînement (P10)."""
+"""Graines des épisodes d'entraînement."""
 STREAM_EVAL = 6
-"""Graines des parties d'évaluation (P10), disjointes de celles d'entraînement."""
+"""Graines des parties d'évaluation, disjointes de celles d'entraînement."""
 STREAM_LEARNING = 7
 """Aléa propre à l'environnement d'apprentissage (conversion d'action illégale)."""
 STREAM_EFFECTS = 8
@@ -42,7 +42,7 @@ def derive_seed(seed: int, *keys: int) -> int:
 def mix64(value: int) -> int:
     """Mélange splitmix64 d'un entier : valeur pseudo-aléatoire sur 63 bits, non nulle.
 
-    Aléa *sans état* pour les règles consultées par la recherche (obstacles, P09.3) :
+    Aléa *sans état* pour les règles consultées par la recherche (obstacles) :
     la même entrée donne toujours la même sortie, sans générateur à copier ni à
     défaire, pour un coût de quelques opérations entières.
     """

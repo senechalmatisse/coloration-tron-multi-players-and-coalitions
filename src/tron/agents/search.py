@@ -1,4 +1,4 @@
-"""Moteurs de recherche à profondeur fixée (§6.3).
+"""Moteurs de recherche à profondeur fixée.
 
 Les trois moteurs partagent le même parcours : apply / undo sur un état unique,
 joueurs vivants en rotation, feuilles (état terminal ou profondeur épuisée)
@@ -15,7 +15,7 @@ joue ``PASS`` (il est éliminé) et ce demi-coup compte dans la profondeur.
   Korf pour W = I, programme linéaire sur le simplexe pour W quelconque.
 * ``negamax`` : negamax alpha-bêta à deux joueurs, référence de validation.
 
-Options (P16, toutes désactivées par défaut) : tri des coups (``static``,
+Options (toutes désactivées par défaut) : tri des coups (``static``,
 ``history``, ``mobility``, ``territory``), table de transposition (meilleur coup
 seulement, jamais une valeur : une collision de clé ne peut changer que l'ordre
 d'exploration), approfondissement itératif, fenêtres d'aspiration à la racine
@@ -186,7 +186,7 @@ class _Ctx:
         self.researches = 0
 
 
-# ------------------------------------------------------------------ outils
+# outils
 def _check_time(ctx: _Ctx) -> None:
     if ctx.deadline is not None and perf_counter() > ctx.deadline:
         raise SearchTimeoutError
@@ -249,7 +249,7 @@ def _dot(row: Sequence[tuple[int, float]], v: Sequence[float]) -> float:
     return sum(w * v[j] for j, w in row)
 
 
-# --------------------------------------------------------------- alpha-bêta
+# alpha-bêta
 def _ab(ctx: _Ctx, depth: int, ply: int, alpha: float, beta: float) -> float:
     ctx.nodes += 1
     if ctx.nodes % _CHECK_EVERY == 0:
@@ -389,7 +389,7 @@ def _root_ab(
     return values, pvs
 
 
-# --------------------------------------------------------------------- MaxN
+# MaxN
 def _mx(ctx: _Ctx, depth: int, ply: int, q: int, x: float) -> list[float]:
     ctx.nodes += 1
     if ctx.nodes % _CHECK_EVERY == 0:
@@ -458,7 +458,7 @@ def _root_mx(
     return values, pvs, vectors
 
 
-# ----------------------------------------------------------------- negamax
+# negamax
 def _nm(ctx: _Ctx, depth: int, ply: int, alpha: float, beta: float) -> float:
     ctx.nodes += 1
     if ctx.nodes % _CHECK_EVERY == 0:
@@ -514,7 +514,7 @@ def _root_nm(
     return values, pvs
 
 
-# ------------------------------------------------------------------ pilote
+# pilote
 def _finish(
     ctx: _Ctx,
     engine: str,

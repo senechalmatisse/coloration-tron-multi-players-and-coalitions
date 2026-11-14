@@ -1,10 +1,9 @@
-"""Agent adaptatif (P05) : ajustement borné des poids de l'heuristique selon les adversaires.
+"""Agent adaptatif : ajustement borné des poids de l'heuristique selon les adversaires.
 
 L'agent délègue la recherche à un agent de repli (``fallback_agent`` : ``social``,
 ``maxn``, ``paranoid`` ou ``greedy``) qui évalue les feuilles avec une heuristique
 composite partagée. Avant chaque décision, il ajuste les poids de cette
-heuristique à partir des probabilités de profils estimées par
-:class:`~tron.agents.opponents.OpponentModel` :
+heuristique à partir des probabilités de profils estimées par :class:`~tron.agents.opponents.OpponentModel` :
 
     w_t = (1 − λ)·w_base + λ·moyenne_q[ w_base + Σ_k e_q(k)·(T_k − w_base) ]
 
@@ -26,7 +25,7 @@ configuration elle-même (:class:`AdaptiveHeuristic`) : l'agent reproduit alors
 **exactement** les décisions de son agent de repli (même flux aléatoire). Dès
 que les poids s'écartent de w_base, l'heuristique composite ajustée prend le relais.
 
-Diplomatie (P03, si elle est active et ``diplomacy`` vrai) : la politique
+Diplomatie (si elle est active et ``diplomacy`` vrai) : la politique
 :func:`~tron.agents.social.tactical_intent` est suivie ; une rupture reste
 prioritaire, sinon l'agent propose une alliance à l'adversaire le plus
 probablement ``cooperative`` (probabilité ≥ ``cooperation_threshold``) s'il est
@@ -236,7 +235,7 @@ class AdaptiveAgent(Agent):
         self.model = OpponentModel(config, player, window=observation_window)
         self._snapshot: DiplomacySnapshot | None = None
 
-    # -------------------------------------------------------------- mémoire
+    # mémoire
     def reset(self) -> None:
         self.inner.reset()
         self.model.reset()
@@ -277,7 +276,7 @@ class AdaptiveAgent(Agent):
         """Probabilités de profils des adversaires vivants."""
         return {q: self.model.probabilities(q) for q in self.model.opponents if state.is_alive(q)}
 
-    # ------------------------------------------------------------- décision
+    # décision
     def _adapt(self, state: GameState) -> None:
         probs = list(self.opponent_probabilities(state).values())
         w = adapted_weights(

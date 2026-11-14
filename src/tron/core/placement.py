@@ -1,4 +1,4 @@
-"""Placement initial des joueurs (F1.6)."""
+"""Placement initial des joueurs."""
 
 from __future__ import annotations
 

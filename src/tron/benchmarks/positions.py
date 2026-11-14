@@ -1,4 +1,4 @@
-"""Jeux de positions déterministes pour les mesures de performance (P13).
+"""Jeux de positions déterministes pour les mesures de performance.
 
 Chaque position vient d'une partie à coups aléatoires prudents (générateur de
 :mod:`tron.core.rng`, graine dérivée de la graine du jeu, de la phase et du rang
@@ -7,8 +7,8 @@ partie non finie, au moins deux équipes en vie, joueur au trait avec un coup
 légal. Quatre phases, définies par rapport à la partie (donc valables pour
 toutes les tailles de grille) :
 
-* ``opening`` : premier état rempli à 2–8 %, tous les joueurs vivants ;
-* ``midgame`` : premier état après 35–50 % de la durée de la partie, joueurs
+* ``opening`` : premier état rempli à 2-8 %, tous les joueurs vivants ;
+* ``midgame`` : premier état après 35-50 % de la durée de la partie, joueurs
   encore en contact (au moins deux joueurs vivants peuvent atteindre une même
   case libre) ;
 * ``partitioned`` : premier état cloisonné — les régions accessibles depuis les

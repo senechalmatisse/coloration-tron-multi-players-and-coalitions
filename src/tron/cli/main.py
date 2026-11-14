@@ -1,4 +1,4 @@
-"""Commande ``tron`` (F7.4) : play, replay, compare, bench, run, analyze, train, config…"""
+"""Commande ``tron`` : play, replay, compare, bench, run, analyze, train, config…"""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from tron._jit import backend_name
 from tron.core.config import ConfigError, GameConfig
 
 
-# ------------------------------------------------------------------- play
+# play
 def cmd_play(args: argparse.Namespace) -> int:
     config = GameConfig.from_yaml(args.config)
     if args.seed is not None or args.first_player is not None:
@@ -112,7 +112,7 @@ def _play_until(match: object, stop_after: int | None) -> None:
 
 
 def _play_to_checkpoint(config: GameConfig, args: argparse.Namespace) -> int:
-    """Joue une partie jusqu'au demi-coup ``--stop-after`` puis la sauvegarde (P08)."""
+    """Joue une partie jusqu'au demi-coup ``--stop-after`` puis la sauvegarde."""
     from tron.sim.match import Match  # noqa: PLC0415
 
     if not args.no_gui or args.games != 1:
@@ -150,7 +150,7 @@ def cmd_resume(args: argparse.Namespace) -> int:
     return 0
 
 
-# ----------------------------------------------------------------- replay
+# replay
 def cmd_replay(args: argparse.Namespace) -> int:
     from tron.sim.recorder import GameLog  # noqa: PLC0415
 
@@ -191,9 +191,9 @@ def cmd_replay(args: argparse.Namespace) -> int:
     return 0
 
 
-# ------------------------------------------------------------------ bench
+# bench
 def cmd_bench(args: argparse.Namespace) -> int:
-    """Mesures historiques, suite reproductible (``--suite``), profil, campagnes (P13)."""
+    """Mesures historiques, suite reproductible (``--suite``), profil, campagnes."""
     import json  # noqa: PLC0415
 
     from tron.benchmarks import runner  # noqa: PLC0415
@@ -380,7 +380,7 @@ def _bench_classic(args: argparse.Namespace) -> int:
     return 0
 
 
-# -------------------------------------------------------------------- run
+# run
 def cmd_run(args: argparse.Namespace) -> int:
     from tron.experiments.plan import Plan  # noqa: PLC0415
     from tron.experiments.runner import estimate, run_plan  # noqa: PLC0415
@@ -419,7 +419,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     return 0
 
 
-# ---------------------------------------------------------------- analyze
+# analyze
 def cmd_analyze(args: argparse.Namespace) -> int:
     from tron.analysis.report import analyze  # noqa: PLC0415
 
@@ -443,7 +443,7 @@ def cmd_analyze(args: argparse.Namespace) -> int:
     return 0
 
 
-# ------------------------------------------------------------ apprentissage
+# apprentissage
 def cmd_train(args: argparse.Namespace) -> int:
     from tron.learning.train import TrainingSpec, evaluation_markdown, run_training  # noqa: PLC0415
 
@@ -510,7 +510,7 @@ def cmd_evaluate_model(args: argparse.Namespace) -> int:
     return 0
 
 
-# ---------------------------------------------------------------- compare
+# compare
 def cmd_compare(args: argparse.Namespace) -> int:
     import json  # noqa: PLC0415
 
@@ -544,7 +544,7 @@ def cmd_compare(args: argparse.Namespace) -> int:
     return 0
 
 
-# ---------------------------------------------------------- configuration
+# configuration
 def cmd_config_validate(args: argparse.Namespace) -> int:
     from tron.cli.config_tools import check  # noqa: PLC0415
 
@@ -604,7 +604,7 @@ def cmd_heuristics_list(args: argparse.Namespace) -> int:
     return 0
 
 
-# ---------------------------------------------------------------- plugins
+# plugins
 def cmd_plugins(args: argparse.Namespace) -> int:
     from tron.plugins import GROUPS, plugin_report  # noqa: PLC0415
 
@@ -631,7 +631,7 @@ def cmd_plugins(args: argparse.Namespace) -> int:
     return 0 if all(i.loaded for i in infos) else 1
 
 
-# ----------------------------------------------------------------- parser
+# parser
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="tron", description="Tron multi-joueur et coalitions")
     parser.add_argument("--version", action="version", version=f"tron {__version__}")

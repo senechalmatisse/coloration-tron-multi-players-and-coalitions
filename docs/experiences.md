@@ -45,7 +45,7 @@ Le scénario `custom` accepte une configuration complète (`config`) modifiée p
 
 | Plan | Question | Taille (pilote) |
 |---|---|---|
-| `etude_a.yaml`, `etude_a_cooperation.yaml`, `etude_b.yaml`, `pilote.yaml` | études historiques (profondeur, coopération, équipes) | – |
+| `etude_a.yaml`, `etude_a_cooperation.yaml`, `etude_b.yaml`, `pilote.yaml` | études historiques (profondeur, coopération, équipes) | - |
 | `heuristic_comparison.yaml` | Voronoi ou composite pour le solitaire, mêmes agents, graines et profondeurs | 320 parties (32) |
 | `ablation.yaml` | contribution marginale de chaque composante de l'heuristique composite | 480 (48) |
 | `mcts_comparison.yaml` | MCTS contre MaxN, Paranoid, Social et Greedy | 800 (40) |
@@ -56,7 +56,7 @@ Le scénario `custom` accepte une configuration complète (`config`) modifiée p
 ## 2. Lancer et reprendre
 
 ```bash
-tron run configs/plans/ablation.yaml --dry-run          # taille du plan
+tron run configs/plans/ablation.yaml --dry-run           # taille du plan
 tron run configs/plans/ablation.yaml --pilot --workers 2 # variante pilote (results/ablation_pilot)
 tron run configs/plans/ablation.yaml --estimate 10       # budget estimé sur 10 parties
 tron run configs/plans/ablation.yaml --workers 8         # campagne complète

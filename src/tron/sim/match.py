@@ -1,8 +1,8 @@
-"""Boucle de partie et observateurs (§6.2, §6.4).
+"""Boucle de partie et observateurs.
 
 ``Match`` demande un coup à l'agent du joueur au trait, l'applique, émet un
 événement vers les observateurs (journal, affichage) et détecte la fin. Le
-moteur ne dépend jamais de l'affichage (F6.5) : la visualisation n'est qu'un
+moteur ne dépend jamais de l'affichage : la visualisation n'est qu'un
 observateur parmi d'autres.
 """
 
@@ -84,10 +84,9 @@ class MatchObserver(Protocol):
 class Match:
     """Une partie entre agents, pilotable coup par coup (``step``) ou d'un bloc (``run``).
 
-    ``metrics`` active le calcul des métriques de coopération (P02, voir
-    :mod:`tron.sim.metrics`) ; ``territory_every`` règle l'observation du
-    territoire (``None`` : tous les n demi-coups, 0 : jamais). Les métriques
-    n'influencent ni les règles ni les décisions.
+    ``metrics`` active le calcul des métriques de coopération (voir :mod:`tron.sim.metrics`) ;
+    ``territory_every`` règle l'observation du territoire (``None`` : tous les n demi-coups, 0 : jamais).
+    Les métriques n'influencent ni les règles ni les décisions.
     """
 
     def __init__(
@@ -204,7 +203,7 @@ class Match:
         )
         self.events.append(event)
         target = event.target
-        for agent in self.agents:  # crochet d'observation (P05), vide pour les agents historiques
+        for agent in self.agents:  # crochet d'observation, vide pour les agents historiques
             agent.observe_move(p, move, origin, target, not moved, st)
         if self.metrics is not None:
             self.metrics.record(st, p, origin, move, event.target, event.eliminated, event.ply)
@@ -242,7 +241,7 @@ class Match:
         cfg = self.config
         st = self.state
         n = cfg.n_players
-        if out.winning_team < 0:  # égalité (P09)
+        if out.winning_team < 0:  # égalité
             winning_team, individual = "", None
         elif cfg.rules.individual:  # équipe de victoire = joueur
             winning_team, individual = cfg.players[out.winning_team].team, out.winning_team

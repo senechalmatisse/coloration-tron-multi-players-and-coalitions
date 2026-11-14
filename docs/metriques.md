@@ -1,4 +1,4 @@
-# Métriques de coopération, de cohésion et de stabilité (P02)
+# Métriques de coopération, de cohésion et de stabilité
 
 Le gagnant, les rangs, le nombre de coups et le coût de recherche ne disent pas si une coalition coopère réellement. Chaque partie produit donc aussi des **métriques de partie**, calculées à partir des événements observables (coups, éliminations), du plateau et des équipes statiques. Elles ne modifient ni les règles ni les décisions : le collecteur (`tron.sim.metrics.MetricsCollector`) utilise ses propres instances d'heuristique.
 
@@ -10,13 +10,13 @@ Notations : t est une équipe statique, ses joueurs sont ses membres ; un demi-c
 
 | Métrique | Définition opérationnelle | Unité, domaine | Non calculable |
 |---|---|---|---|
-| `survival_plies[p]` | demi-coups après lesquels p est encore vivant (indice du demi-coup de son élimination, ou durée totale s'il survit) | demi-coups, ≥ 0 | – |
-| `team_survival_plies[t]` | max des `survival_plies` des membres : demi-coups pendant lesquels au moins un membre vit | demi-coups | – |
-| `team_rank[t]` | meilleur rang final d'un membre (1 = équipe gagnante) | ≥ 1 | – |
+| `survival_plies[p]` | demi-coups après lesquels p est encore vivant (indice du demi-coup de son élimination, ou durée totale s'il survit) | demi-coups, ≥ 0 | - |
+| `team_survival_plies[t]` | max des `survival_plies` des membres : demi-coups pendant lesquels au moins un membre vit | demi-coups | - |
+| `team_rank[t]` | meilleur rang final d'un membre (1 = équipe gagnante) | ≥ 1 | - |
 | `intra_team_distance_mean[t]` | moyenne, sur les états observés (initial puis après chaque demi-coup) où au moins deux membres vivent, de la distance de Manhattan moyenne entre têtes de membres vivants | cases | `None` si jamais deux membres vivants ensemble |
-| `ally_collisions[t]` | éliminations de membres dont la cause est **sans ambiguïté** un mur de coéquipier : collision directe, ou enfermement dont toutes les cases bloquantes (hors bordure et murs du joueur) sont à des coéquipiers | nombre | – |
-| `blocking_moves[t]` | déplacements d'un membre qui l'amènent à côté de la tête d'un coéquipier vivant (le coéquipier perd une case libre voisine) | nombre | – |
-| `team_moves[t]` | déplacements (hors éliminations) des membres | nombre | – |
+| `ally_collisions[t]` | éliminations de membres dont la cause est **sans ambiguïté** un mur de coéquipier : collision directe, ou enfermement dont toutes les cases bloquantes (hors bordure et murs du joueur) sont à des coéquipiers | nombre | - |
+| `blocking_moves[t]` | déplacements d'un membre qui l'amènent à côté de la tête d'un coéquipier vivant (le coéquipier perd une case libre voisine) | nombre | - |
+| `team_moves[t]` | déplacements (hors éliminations) des membres | nombre | - |
 | `cooperation_proxy[t]` | ½·(1 − distance / (W + H − 2)) + ½·(1 − blocking_moves / team_moves) | [0, 1] | `None` si la distance l'est |
 | `territory_share_mean[t]` | moyenne de la somme des parts de Voronoi des membres aux points d'observation (état initial puis tous les k demi-coups, k = nombre de joueurs) | [0, 1] | `None` sans observation |
 | `collective_vs_individual_gap[t]` | 1 − moyenne des `survival_plies` des membres / `team_survival_plies[t]` | [0, 1[ | `None` pour une équipe d'un joueur |

@@ -2,7 +2,7 @@
 
 `tron heuristics list` affiche les heuristiques disponibles (intégrées et extensions) avec leurs paramètres ; l'heuristique `zone` du contrôle de zone est décrite dans `docs/modes-de-jeu.md`.
 
-Une heuristique évalue un état **non terminal** par un vecteur de parts h, une composante par joueur. Les états terminaux sont traités à part par `Valuation` (voir `docs/algorithmes.md`, §1).
+Une heuristique évalue un état **non terminal** par un vecteur de parts h, une composante par joueur. Les états terminaux sont traités à part par `Valuation` (voir `docs/algorithmes.md`).
 
 ## 1. Contrat `shares`
 
@@ -44,7 +44,7 @@ Les clés autres que `name` sont passées au constructeur ; un paramètre inconn
 
 | Nom | Principe | Paramètres |
 |---|---|---|
-| `uniform` | parts égales entre joueurs vivants (référence des tests de recherche) | – |
+| `uniform` | parts égales entre joueurs vivants (référence des tests de recherche) | - |
 | `voronoi` | territoire de Voronoi (parcours en largeur multi-sources) | `tie` (`order`, `neutral`), `separation` |
 | `composite` | territoire, mobilité, sorties, marge, contrôle des passages | les cinq poids, `tie`, `separation` |
 
@@ -52,7 +52,7 @@ Les clés autres que `name` sont passées au constructeur ; un paramètre inconn
 
 Voir `docs/algorithmes.md`, §6. Le noyau est compatible Numba ; ses tableaux de travail (distances, masques des joueurs à distance minimale, marques) sont exposés par `VoronoiHeuristic.last_search()` pour être réutilisés sans refaire le parcours.
 
-### 2.2 Composite (P01)
+### 2.2 Composite
 
 Pour chaque joueur vivant p, cinq caractéristiques bornées dans [0, 1] :
 

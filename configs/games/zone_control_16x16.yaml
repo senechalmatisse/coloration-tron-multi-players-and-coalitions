@@ -1,4 +1,4 @@
-# Controle de zone (P09.2) : a la fin de chaque tour complet, une zone rapporte
+# Controle de zone : a la fin de chaque tour complet, une zone rapporte
 # un point a l'equipe qui y a seule au moins une tete vivante (regle V1 : head).
 # Une zone vide ou disputee (tetes de plusieurs equipes) ne rapporte rien.
 # Victoire : premier a target_score, sinon derniere equipe en vie, sinon plus

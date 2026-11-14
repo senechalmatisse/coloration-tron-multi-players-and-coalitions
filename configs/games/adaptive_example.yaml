@@ -1,4 +1,4 @@
-# Agent adaptatif (P05) : modele d'adversaire (fenetre glissante de 20 coups)
+# Agent adaptatif : modele d'adversaire (fenetre glissante de 20 coups)
 # et ajustement borne (adaptation_rate) des poids de l'heuristique composite.
 # Tant que le modele est peu confiant, l'agent joue exactement comme son agent
 # de repli (fallback_agent, ici social avec le profil team).

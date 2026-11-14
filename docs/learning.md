@@ -1,4 +1,4 @@
-# Apprentissage (P10)
+# Apprentissage
 
 Le paquet `tron.learning` fournit un environnement d'apprentissage par renforcement, un encodage des observations, une politique linéaire de référence entraînable et un rapport d'évaluation. **NumPy suffit** : aucun cadre d'apprentissage n'est requis, ni pour entraîner, ni pour recharger et jouer un modèle. L'extra facultatif `learning` (`pip install "tron[learning]"`) installe Gymnasium pour l'adaptateur `tron.learning.gym`.
 
@@ -71,7 +71,7 @@ Dictionnaire de tableaux NumPy, **relatif à l'apprenant** : le joueur relatif 0
 
 ## 2. Politique linéaire de référence
 
-**Caractéristiques `afterstate-v1`** (`FeatureExtractor`) : décrivent l'état **après** un coup de l'apprenant, toutes dans [−1, 1] et indépendantes de la taille de la grille (un modèle entraîné sur 10×10 s'évalue sur 12×12). Elles reprennent les composantes de l'heuristique composite (P01) :
+**Caractéristiques `afterstate-v1`** (`FeatureExtractor`) : décrivent l'état **après** un coup de l'apprenant, toutes dans [−1, 1] et indépendantes de la taille de la grille (un modèle entraîné sur 10×10 s'évalue sur 12×12). Elles reprennent les composantes de l'heuristique composite :
 
 | Caractéristiques | Contenu |
 |---|---|
@@ -86,8 +86,9 @@ Dictionnaire de tableaux NumPy, **relatif à l'apprenant** : le joueur relatif 0
 **Valeur** V(φ) = w · φ ; l'agent joue le coup dont l'état après coup a la plus grande valeur (égalités départagées par le générateur de l'agent).
 
 **Entraînement** : SARSA(0) semi-gradient sur les états après coup, ε-glouton (ε décroît linéairement de `start` à `end`) :
-
+<p align="center">
     w ← w + α · (r + γ · V(φ_suivant) − V(φ_précédent)) · φ_précédent
+<p>
 
 et, en fin de partie, vers la récompense terminale (troncature : amorçage sur la meilleure valeur suivante). Les places adverses sont tirées à chaque épisode parmi les agents de référence ; en **auto-jeu**, le modèle est figé à la fin de chaque génération et rejoint les adversaires possibles (proportion `self_play.share`). Les coéquipiers restent les agents de la configuration. Le premier joueur tourne d'un épisode à l'autre. Tout l'aléa vient de `tron.core.rng` : deux entraînements de même graine donnent les mêmes poids (testé).
 

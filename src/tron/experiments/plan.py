@@ -1,4 +1,4 @@
-"""Plan d'expériences YAML (F5.3).
+"""Plan d'expériences YAML.
 
 Exemple ::
 
@@ -138,7 +138,7 @@ class Plan:
             if not isinstance(levels, Sequence) or isinstance(levels, str) or not levels:
                 raise ConfigError(f"le facteur {name} doit avoir une liste de niveaux")
 
-    # ---------------------------------------------------------------- chargement
+    # chargement
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> Plan:
         unknown = set(data) - _PLAN_KEYS
@@ -219,7 +219,7 @@ class Plan:
             kc["games"] = games
         return replace(self, games=games, key_conditions=kc)
 
-    # ------------------------------------------------------------- conditions
+    # conditions
     def _combinations(self) -> list[dict[str, Any]]:
         design = self.design
         names = list(self.factors)

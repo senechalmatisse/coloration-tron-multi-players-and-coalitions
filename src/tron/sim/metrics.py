@@ -1,4 +1,4 @@
-"""Métriques de coopération, de cohésion et de stabilité d'une partie (P02).
+"""Métriques de coopération, de cohésion et de stabilité d'une partie.
 
 Les métriques sont calculées à partir des événements observables (coups,
 éliminations), de l'état du plateau et des équipes statiques, sans modifier les
@@ -40,7 +40,7 @@ Définitions (t est une équipe statique, ses joueurs sont ses « membres ») :
   longtemps que l'équipe, proche de 1 si l'équipe ne survit que grâce à un
   membre. ``None`` pour une équipe d'un joueur ou une survie d'équipe nulle.
 
-Diplomatie (P03, si elle est activée) : nombre de propositions, d'alliances
+Diplomatie (si elle est activée) : nombre de propositions, d'alliances
 formées, de ruptures, de trahisons (règle explicite de :mod:`tron.sim.diplomacy`),
 d'intentions refusées et durée moyenne des alliances (demi-coups ; une alliance
 encore active dure jusqu'à la fin de la partie).
@@ -98,7 +98,7 @@ class MetricsCollector:
         self._blocks = [0] * t
         self._moves = [0] * t
 
-    # ---------------------------------------------------------- observations
+    # observations
     def start(self, state: GameState) -> None:
         self._observe_distances(state)
         if self._heur is not None and not state.is_terminal():
@@ -177,7 +177,7 @@ class MetricsCollector:
             self._terr_sum[t] += sum(shares[p] for p in members)
         self._terr_obs += 1
 
-    # ------------------------------------------------------------- sauvegarde
+    # sauvegarde
     _FIELDS = (
         "_dist_sum",
         "_dist_obs",
@@ -199,7 +199,7 @@ class MetricsCollector:
             value = data[name]
             setattr(self, name, list(value) if isinstance(value, list) else value)
 
-    # --------------------------------------------------------------- bilan
+    # bilan
     def finish(self, state: GameState, diplomacy: DiplomacySummary | None = None) -> MatchMetrics:
         """Métriques de la partie à partir de l'état final (terminal ou non).
 

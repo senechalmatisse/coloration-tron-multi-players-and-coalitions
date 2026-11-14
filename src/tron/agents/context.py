@@ -1,4 +1,4 @@
-"""Contexte immuable d'une décision et types diplomatiques (P03).
+"""Contexte immuable d'une décision et types diplomatiques.
 
 Ces types sont définis dans la couche ``agents`` pour que les agents les
 reçoivent sans dépendre de la simulation ; le gestionnaire mutable des alliances

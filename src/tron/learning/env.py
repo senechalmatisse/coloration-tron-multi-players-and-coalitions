@@ -1,4 +1,4 @@
-"""Environnement d'apprentissage (P10), inspiré de Gymnasium sans en dépendre.
+"""Environnement d'apprentissage, inspiré de Gymnasium sans en dépendre.
 
 .. code-block:: python
 
@@ -105,7 +105,7 @@ class TronEnv:
         self.steps = 0
         self.done = True
 
-    # ------------------------------------------------------------- accès
+    # accès
     @property
     def state(self) -> GameState:
         """État courant (à ne pas modifier : travailler sur ``state.copy()``)."""
@@ -120,7 +120,7 @@ class TronEnv:
             return []
         return st.legal_moves()
 
-    # ------------------------------------------------------------ épisode
+    # épisode
     def reset(
         self,
         seed: int | None = None,
@@ -192,7 +192,7 @@ class TronEnv:
         info = self._info(illegal=illegal, played=move)
         return self._observe(), reward, terminated, truncated, info
 
-    # ------------------------------------------------------------ interne
+    # interne
     def _play(self, move: int) -> None:
         st = self.state
         p = st.current

@@ -1,4 +1,4 @@
-"""Agents de recherche : Negamax, Paranoid, MaxN et SocialAgent (F3.3 à F3.6, F4)."""
+"""Agents de recherche : Negamax, Paranoid, MaxN et SocialAgent."""
 
 from __future__ import annotations
 
@@ -139,7 +139,7 @@ class SearchAgent(Agent):
 
 @register_agent("negamax")
 class NegamaxAgent(SearchAgent):
-    """Negamax alpha-bêta à deux joueurs (référence de validation, F3.5)."""
+    """Negamax alpha-bêta à deux joueurs (référence de validation)."""
 
     def __init__(self, player: int, config: GameConfig, **kwargs: Any) -> None:
         if config.n_players != 2:
@@ -154,7 +154,7 @@ class NegamaxAgent(SearchAgent):
 
 @register_agent("paranoid")
 class ParanoidAgent(SearchAgent):
-    """Paranoid (F3.3) : le joueur racine maximise sa part, tous les autres la minimisent."""
+    """Paranoid : le joueur racine maximise sa part, tous les autres la minimisent."""
 
     DEFAULT_ORDERING = "history"
     DEFAULT_ITERATIVE = True
@@ -181,7 +181,7 @@ class ParanoidAgent(SearchAgent):
 
 @register_agent("maxn")
 class MaxNAgent(SearchAgent):
-    """MaxN (F3.4) : chacun maximise sa composante, élagage superficiel de Korf."""
+    """MaxN : chacun maximise sa composante, élagage superficiel de Korf."""
 
     def run_search(self, state: GameState, depth: int) -> SearchResult:
         val = self.valuation
@@ -206,13 +206,13 @@ class MaxNAgent(SearchAgent):
 
 @register_agent("social")
 class SocialAgent(SearchAgent):
-    """Recherche à préférences sociales (matrice W, F4.2 à F4.6).
+    """Recherche à préférences sociales (matrice W).
 
     Paramètres : ``profile`` (``maxn``, ``paranoid``, ``team``, ``team_paranoid``,
     ``custom``, ``dynamic_team``), ``alpha`` (profils ``team`` et ``dynamic_team``),
     ``matrix`` (profil ``custom``), ``engine`` (``auto``, ``alphabeta``, ``maxn``).
 
-    Diplomatie (P03) : avec ``diplomacy`` vrai (par défaut pour ``dynamic_team``)
+    Diplomatie : avec ``diplomacy`` vrai (par défaut pour ``dynamic_team``)
     et la diplomatie de la partie activée, chaque décision utilise la matrice
     dynamique W_t (:func:`~tron.agents.social.dynamic_matrix`) et se termine par
     une intention de :func:`~tron.agents.social.tactical_intent` (paramètre
@@ -276,7 +276,7 @@ class SocialAgent(SearchAgent):
         super().reset()
         self.set_matrix(self.base_matrix)
 
-    # ------------------------------------------------------- matrice dynamique
+    # matrice dynamique
     def set_matrix(self, w: Matrix) -> None:
         """Remplace W (et les structures dérivées) si elle a changé."""
         if w == self.matrix:

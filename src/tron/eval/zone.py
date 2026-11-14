@@ -1,4 +1,4 @@
-"""Heuristique du mode contrôle de zone (P09.2).
+"""Heuristique du mode contrôle de zone.
 
 Pour chaque joueur vivant p, trois caractéristiques dans [0, 1] :
 
@@ -9,8 +9,7 @@ Pour chaque joueur vivant p, trois caractéristiques dans [0, 1] :
   partagé entre les membres vivants de l'équipe.
 
 raw(p) = Σ w_k·x_k(p), plancher 1/(4·W·H) ; parts normalisées sur les vivants
-(Σ h = 1, 0 pour un éliminé). Hors du mode ``zone_control`` (aucune zone),
-l'heuristique vaut Voronoi.
+(Σ h = 1, 0 pour un éliminé). Hors du mode ``zone_control`` (aucune zone), l'heuristique vaut Voronoi.
 """
 
 from __future__ import annotations

@@ -1,4 +1,4 @@
-"""Tests de l'heuristique territoriale multicritère (P01)."""
+"""Tests de l'heuristique territoriale multicritère."""
 
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ from tron.sim import Match
 CONFIGS = Path(__file__).resolve().parents[1] / "configs"
 
 
-# ------------------------------------------------------------- référence naïve
+# référence naïve
 def _components(st: GameState, cells: set[int]) -> tuple[dict[int, int], int]:
     label: dict[int, int] = {}
     k = 0
@@ -113,7 +113,7 @@ def random_state(
     return st
 
 
-# ------------------------------------------------------------------- noyau
+# noyau
 @pytest.mark.parametrize("tie", ["order", "neutral"])
 def test_kernel_matches_brute_force(tie: str) -> None:
     rng = random.Random(17 if tie == "order" else 18)
@@ -189,7 +189,7 @@ def test_territory_component_is_the_voronoi_share_and_voronoi_is_unchanged() -> 
         assert only_territory.shares(st) == pytest.approx(vor.shares(st), abs=1e-12)
 
 
-# ---------------------------------------------------------------- poids
+# poids
 @pytest.mark.parametrize(
     "weights",
     [
@@ -229,7 +229,7 @@ def test_weights_are_normalized_and_defaults_apply() -> None:
         make_heuristic("composite", 8, 8, 2, inconnu=1)
 
 
-# ------------------------------------------------------------- symétries
+# symétries
 def _mirror_text(rows: list[str]) -> str:
     return "\n".join(rows)
 
@@ -283,7 +283,7 @@ def test_rotation_symmetric_four_players() -> None:
     assert max(s) - min(s) < 1e-12
 
 
-# ----------------------------------------------------- Valuation et recherche
+# Valuation et recherche
 def test_floor_keeps_alive_above_dead_values() -> None:
     cfg = make_config(5, 5, 3, heuristic={"name": "composite", "territory": 0})
     st = GameState.from_text(
@@ -355,7 +355,7 @@ def test_pruning_stays_exact_with_composite() -> None:
     assert tested >= 12
 
 
-# ------------------------------------------------------------ intégration
+# intégration
 def test_yaml_config_and_match() -> None:
     cfg = GameConfig.from_yaml(CONFIGS / "games" / "composite_20x20.yaml")
     assert cfg.heuristic.name == "composite"

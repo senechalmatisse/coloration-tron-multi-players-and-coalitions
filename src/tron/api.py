@@ -1,4 +1,4 @@
-"""API Python publique et stable (P11).
+"""API Python publique et stable.
 
 Façade pour un notebook, un autre programme Python ou un outil externe, sans
 passer par la CLI. Les noms de ``__all__`` forment l'API stable (version
@@ -24,8 +24,7 @@ passer par la CLI. Les noms de ``__all__`` forment l'API stable (version
 * :class:`Match` est **à usage unique** : ``run()`` joue la partie jusqu'au bout
   et la consomme ; un nouvel appel renvoie le même :class:`MatchResult` sans
   rejouer. Pour une autre partie, créer un autre ``Match``.
-* :class:`MatchResult` et :class:`GameLog` sont des valeurs : à lire, pas à
-  modifier.
+* :class:`MatchResult` et :class:`GameLog` sont des valeurs : à lire, pas à modifier.
 
 **Exceptions publiques** : :class:`ConfigError` (configuration invalide),
 :class:`LogError` (journal illisible ou incohérent), :class:`CheckpointError`
@@ -100,8 +99,8 @@ def create_match(
 ) -> Match:
     """Prépare une partie (sans la jouer) : ``match.step()`` ou ``match.run()`` ensuite.
 
-    ``agents`` remplace les agents de la configuration (un par joueur, dans
-    l'ordre) ; ``metrics=False`` désactive les métriques de coopération.
+    ``agents`` remplace les agents de la configuration (un par joueur, dans l'ordre) ;
+    ``metrics=False`` désactive les métriques de coopération.
     """
     cfg = _configured(config, seed, first_player)
     if agents is not None and len(agents) != cfg.n_players:
@@ -182,8 +181,7 @@ def load_replay(path: str | Path) -> GameLog:
     """Charge un journal JSONL (``tron-log/1`` ou ``tron-log/2``) pour le rejouer.
 
     ``log.states()`` itère les états successifs, ``log.final_state()`` donne
-    l'état final ; une incohérence entre le journal et les règles lève
-    :class:`LogError`.
+    l'état final ; une incohérence entre le journal et les règles lève :class:`LogError`.
     """
     p = Path(path)
     if not p.is_file():

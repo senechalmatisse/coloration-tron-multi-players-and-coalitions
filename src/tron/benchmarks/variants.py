@@ -1,4 +1,4 @@
-"""Comparaison contrôlée des options de recherche (P16).
+"""Comparaison contrôlée des options de recherche.
 
 Pour chaque position d'un jeu déterministe, chaque variante (une option à la
 fois) est jouée par un agent neuf et comparée à la recherche de référence

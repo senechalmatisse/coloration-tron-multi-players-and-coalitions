@@ -1,4 +1,4 @@
-"""Extensions externes par entry points (P12)."""
+"""Extensions externes par entry points."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Tests des campagnes comparatives et des analyses enrichies (P06)."""
+"""Tests des campagnes comparatives et des analyses enrichies."""
 
 from __future__ import annotations
 

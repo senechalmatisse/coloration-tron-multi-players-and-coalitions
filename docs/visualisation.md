@@ -2,7 +2,7 @@
 
 La visualisation n'est qu'un observateur : le moteur fonctionne sans elle (`--no-gui`). La logique de lecture (`tron.viz.controller`), la scène (`tron.viz.scene`) et les rendus NumPy (`tron.viz.render`, `tron.viz.neon`) sont indépendants d'Arcade et testés sans écran ; seules `tron.viz.arcade_app`, `tron.viz.comparison_app` et `tron.viz.neon_arcade` dessinent dans une fenêtre.
 
-Deux thèmes : **néon** (« Neon Arena », défaut de la ligne de commande, § 5) et **classique** (palette validée pour les daltoniens, défaut des fonctions de la bibliothèque). La touche `T` bascule de l'un à l'autre en cours de partie.
+Deux thèmes : **néon** (« Neon Arena », défaut de la ligne de commande) et **classique** (palette validée pour les daltoniens, défaut des fonctions de la bibliothèque). La touche `T` bascule de l'un à l'autre en cours de partie.
 
 ## 1. Commandes et touches
 
@@ -30,7 +30,7 @@ tron replay results/ffa4/game_0000.jsonl --gif p.gif            # export GIF / M
 | `S` | capture d'écran |
 | `Échap` / `Q` | quitter |
 
-## 2. Explication des décisions (P07)
+## 2. Explication des décisions
 
 Chaque décision porte un `DecisionDetails` typé et sérialisable (`tron.agents.base`), rempli uniquement avec ce que l'agent a réellement calculé :
 
@@ -54,7 +54,7 @@ Un rejeu restitue exactement les mêmes informations qu'en direct. Un journal sa
 
 Les tests utilisent un bouchon d'API Arcade : ils vérifient la logique de la fenêtre (touches, appels de dessin, textes), pas le rendu réel. La fenêtre doit être validée sur un poste graphique avec la procédure de `docs/validation-gui.md`.
 
-## 4. Comparaison de deux rejeux (P17)
+## 4. Comparaison de deux rejeux
 
 ```bash
 tron play configs/games/ffa4_20x20.yaml --no-gui --out /tmp/a

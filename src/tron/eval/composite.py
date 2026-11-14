@@ -1,4 +1,4 @@
-"""Heuristique territoriale multicritère (P01).
+"""Heuristique territoriale multicritère.
 
 Pour chaque joueur vivant p, cinq caractéristiques bornées dans [0, 1] :
 

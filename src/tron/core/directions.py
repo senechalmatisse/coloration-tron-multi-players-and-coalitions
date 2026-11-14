@@ -1,4 +1,4 @@
-"""Directions de déplacement (F1.3). Origine en haut à gauche, nord = y − 1."""
+"""Directions de déplacement. Origine en haut à gauche, nord = y − 1."""
 
 from __future__ import annotations
 

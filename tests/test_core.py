@@ -1,4 +1,4 @@
-"""Tests du moteur de jeu (jalon J1)."""
+"""Tests du moteur de jeu."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from tron.core.directions import direction_name, parse_direction
 from tron.core.placement import initial_positions, random_positions, regular_positions
 
 
-# ------------------------------------------------------------------ config
+# config
 def test_config_formats_and_defaults() -> None:
     cfg = GameConfig.from_dict(
         {
@@ -69,7 +69,7 @@ def test_config_validation(data: dict) -> None:
         GameConfig.from_dict(data)
 
 
-# --------------------------------------------------------------- placement
+# placement
 def test_regular_placement_is_symmetric() -> None:
     pos = regular_positions(20, 20, 2, 0.35)
     (x0, y0), (x1, y1) = pos
@@ -115,7 +115,7 @@ def test_directions() -> None:
         parse_direction(7)
 
 
-# ------------------------------------------------------------------ règles
+# règles
 def test_initial_state() -> None:
     cfg = make_config(10, 10, 2, first_player=1)
     st = GameState(cfg)

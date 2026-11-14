@@ -1,4 +1,4 @@
-# Etude A : un joueur (Paranoid) contre une coalition de k joueurs (section 7.1).
+# Etude A : un joueur (Paranoid) contre une coalition de k joueurs.
 # 6 x 4 x 5 x 3 = 360 conditions, 100 parties chacune (200 pour les conditions cles).
 name: etude_a
 description: Influence de la profondeur selon la taille de la coalition et de la grille.

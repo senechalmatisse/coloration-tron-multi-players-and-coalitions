@@ -1,4 +1,4 @@
-"""Rendu hors écran (P14) : ``render_frame`` sans fenêtre ni Arcade.
+"""Rendu hors écran : ``render_frame`` sans fenêtre ni Arcade.
 
 Ces tests valident l'image NumPy (dimensions, type, couleurs des murs, des têtes,
 des joueurs éliminés et des territoires). Ils ne valident pas la fenêtre Arcade

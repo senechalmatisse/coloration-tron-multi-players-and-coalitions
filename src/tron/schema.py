@@ -1,7 +1,6 @@
 """Schéma des fichiers de résultats, partagé par ``sim`` (écriture) et ``analysis`` (lecture).
 
-Module neutre, sans dépendance : l'analyse d'un CSV n'importe ni le moteur, ni
-Numba, ni l'affichage.
+Module neutre, sans dépendance : l'analyse d'un CSV n'importe ni le moteur, ni Numba, ni l'affichage.
 """
 
 MAX_PLAYERS = 8
@@ -10,8 +9,8 @@ MAX_TEAMS = 8
 METRICS_VERSION = 2
 """Version du schéma des métriques de partie (colonne ``metrics_version`` du CSV).
 
-1 : métriques de coopération par joueur et par équipe (P02) ;
-2 : ajout des colonnes ``dipl_*`` de la diplomatie tactique (P03).
+1 : métriques de coopération par joueur et par équipe ;
+2 : ajout des colonnes ``dipl_*`` de la diplomatie tactique.
 """
 
 TEAM_METRIC_COLUMNS: tuple[tuple[str, str], ...] = (

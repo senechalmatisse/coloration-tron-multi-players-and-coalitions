@@ -1,4 +1,4 @@
-# P06 : diplomatie tactique inactive contre active, duree de vie des
+# Diplomatie tactique inactive contre active, duree de vie des
 # propositions, poids d'alliance et taille de coalition. Tous les joueurs ont le
 # profil dynamic_team (politique contre le meneur) ; l'equipe suivie est T0.
 # Sans diplomatie, la duree de vie et le poids sont sans effet : seules les

@@ -1,4 +1,4 @@
-"""Optimisations contrôlées des moteurs de recherche (P16).
+"""Optimisations contrôlées des moteurs de recherche.
 
 Chaque option exacte (tris, table de transposition, approfondissement itératif,
 fenêtres d'aspiration) doit donner la même valeur racine, les mêmes coups ex

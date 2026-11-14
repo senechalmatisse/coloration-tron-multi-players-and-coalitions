@@ -1,4 +1,4 @@
-# P06 : agent fixe (social, profil team) contre agent adaptatif (meme agent de
+# Agent fixe (social, profil team) contre agent adaptatif (meme agent de
 # repli) face a chaque profil d'adversaire : greedy (territorial), random
 # (random_like), paranoid et maxn. Le taux d'adaptation ne concerne que
 # l'agent adaptatif : une seule valeur est gardee pour l'agent fixe.

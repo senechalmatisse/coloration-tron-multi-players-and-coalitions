@@ -1,4 +1,4 @@
-"""Mesures de performance reproductibles (P13).
+"""Mesures de performance reproductibles.
 
 Les tests par défaut vérifient la mécanique des mesures (positions déterministes,
 sommes de contrôle, comparaison, profil, CLI) sans aucun seuil de temps. Les
@@ -156,7 +156,7 @@ def test_cli_bench_suite_reference_profile_and_campaign(
     assert "évaluations/s" in capsys.readouterr().out
 
 
-# ----------------------------------------------------------------- charge
+# charge
 @pytest.mark.load
 @pytest.mark.parametrize(("grid", "players", "depth"), [(40, 8, 3), (60, 4, 4)])
 def test_load_search_on_large_grids(grid: int, players: int, depth: int) -> None:

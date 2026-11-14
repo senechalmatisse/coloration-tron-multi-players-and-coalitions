@@ -1,4 +1,4 @@
-"""Tests de l'agent adaptatif (P05)."""
+"""Tests de l'agent adaptatif."""
 
 from __future__ import annotations
 

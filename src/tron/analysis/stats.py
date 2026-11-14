@@ -1,4 +1,4 @@
-"""Indicateurs et tests statistiques (F7.1, §7.3).
+"""Indicateurs et tests statistiques.
 
 * intervalle de score de Wilson à 95 % : centre (p̂ + z²/2n)/(1 + z²/n), demi-largeur
   z/(1 + z²/n)·√(p̂(1 − p̂)/n + z²/4n²) ;

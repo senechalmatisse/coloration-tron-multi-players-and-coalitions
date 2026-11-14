@@ -1,4 +1,4 @@
-"""Configuration immuable d'une partie (F5.1).
+"""Configuration immuable d'une partie.
 
 Exemple de fichier YAML ::
 
@@ -96,7 +96,7 @@ class PlayerSpec:
 
 @dataclass(frozen=True, slots=True)
 class PlacementSpec:
-    """Placement initial (F1.6) : régulier autour du centre, aléatoire ou manuel."""
+    """Placement initial : régulier autour du centre, aléatoire ou manuel."""
 
     mode: str = "regular"
     radius: float = 0.35
@@ -114,7 +114,7 @@ class PlacementSpec:
 
 @dataclass(frozen=True, slots=True)
 class HeuristicSpec:
-    """Heuristique d'évaluation et ses paramètres (F2.1–F2.4)."""
+    """Heuristique d'évaluation et ses paramètres."""
 
     name: str = "voronoi"
     params: dict[str, Any] = field(default_factory=dict)
@@ -125,7 +125,7 @@ class HeuristicSpec:
 
 @dataclass(frozen=True, slots=True)
 class DiplomacySpec:
-    """Diplomatie tactique (P03) : alliances souples entre joueurs, hors règles de victoire.
+    """Diplomatie tactique : alliances souples entre joueurs, hors règles de victoire.
 
     Les alliances modifient seulement les préférences sociales des agents qui
     les exploitent ; les équipes permanentes et la condition de victoire restent
@@ -190,7 +190,7 @@ class GameConfig:
     def __post_init__(self) -> None:
         self._validate()
 
-    # ------------------------------------------------------------------ dérivés
+    # dérivés
     @property
     def n_players(self) -> int:
         return len(self.players)
@@ -238,7 +238,7 @@ class GameConfig:
         fp = self.first_player if first_player is None else first_player
         return replace(self, seed=seed, first_player=fp)
 
-    # ------------------------------------------------------------ validation
+    # validation
     def _validate(self) -> None:
         w, h = self.width, self.height
         if not (MIN_SIZE <= w <= MAX_SIZE and MIN_SIZE <= h <= MAX_SIZE):
@@ -279,7 +279,7 @@ class GameConfig:
         except RulesError as exc:
             raise ConfigError(str(exc)) from exc
 
-    # -------------------------------------------------------- sérialisation
+    # sérialisation
     def to_dict(self) -> dict[str, Any]:
         data: dict[str, Any] = {
             "name": self.name,
@@ -332,7 +332,7 @@ class GameConfig:
         )
 
 
-# ---------------------------------------------------------------- utilitaires
+# utilitaires
 def load_yaml(path: str | Path) -> Any:
     """Lit un fichier YAML (chargeur C s'il est disponible)."""
     loader = getattr(yaml, "CSafeLoader", yaml.SafeLoader)

@@ -1,4 +1,4 @@
-"""Agents de référence (F3.2) : aléatoire et glouton."""
+"""Agents de référence : aléatoire et glouton."""
 
 from __future__ import annotations
 

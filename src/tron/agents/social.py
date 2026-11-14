@@ -1,4 +1,4 @@
-"""Préférences sociales (extension inspirée de SOS, F4.1 à F4.6).
+"""Préférences sociales (extension inspirée de SOS).
 
 Matrice W (n × n) : ``W[p][j]`` est le poids que le joueur p accorde à la
 composante v(j). À chaque nœud, p retient le fils qui maximise W[p]·v. Wilson,
@@ -98,8 +98,7 @@ def dynamic_matrix(
     1. W_t = W_base ;
     2. pour chaque alliance active (a, b) : W_t[a][b] = max(W_t[a][b], alliance_weight),
        et de même pour W_t[b][a] (statut d'alliance symétrique) ;
-    3. si ``betrayal_penalty`` > 0 : W_t[p][q] -= betrayal_penalty × (trahisons de q
-       envers p) ;
+    3. si ``betrayal_penalty`` > 0 : W_t[p][q] -= betrayal_penalty × (trahisons de q envers p) ;
     4. bornage de chaque poids dans [−1, 1] (contrainte de SOS).
 
     W_t est constante pendant une recherche : les agents ne simulent pas les
@@ -213,7 +212,7 @@ class TwoCamp:
 def two_camp_reduction(
     w: Matrix, team: Sequence[int], root: int, alive: Sequence[bool]
 ) -> TwoCamp | None:
-    """Détecte si W se ramène à deux camps pour les joueurs vivants (F4.4)."""
+    """Détecte si W se ramène à deux camps pour les joueurs vivants."""
     n = len(w)
     r = w[root]
     if any(x != 0.0 for x in r):
@@ -244,7 +243,7 @@ def two_camp_reduction(
     return None
 
 
-# ------------------------------------------------- élagage superficiel généralisé
+# élagage superficiel généralisé
 def lp_upper(a: Sequence[float], b: Sequence[float], s: float, y: float) -> float:
     """max b·v  s.c.  a·v ≥ y,  v ≥ 0,  Σv ≤ s  (énumération des sommets, O(n²)).
 

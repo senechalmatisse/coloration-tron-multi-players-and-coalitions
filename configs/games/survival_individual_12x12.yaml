@@ -1,4 +1,4 @@
-# Mode survie (P09.1) : chaque joueur est classe selon sa duree de survie.
+# Mode survie : chaque joueur est classe selon sa duree de survie.
 # victory_scope: individual -> la partie continue tant que deux joueurs vivent,
 # coequipiers compris ; le dernier survivant gagne (resultat individuel explicite).
 # Les equipes restent celles des preferences sociales (profil team).

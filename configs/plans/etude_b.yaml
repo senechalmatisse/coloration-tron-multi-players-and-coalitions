@@ -1,4 +1,4 @@
-# Etude B : equipes contre equipes (section 7.2).
+# Etude B : equipes contre equipes.
 # Profondeur de l'equipe T0 contre celle de T1 (T2 eventuelle : depth par defaut).
 name: etude_b
 description: Equipes contre equipes, profil Equipe (alpha = 1) contre chacun pour soi (MaxN).

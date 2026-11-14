@@ -1,4 +1,4 @@
-# Entrainement de reference (P10) : politique lineaire sur les etats apres coup
+# Entrainement de reference : politique lineaire sur les etats apres coup
 # (SARSA(0) semi-gradient, caracteristiques afterstate-v1), NumPy seulement.
 # - game : partie d'entrainement (chemin relatif a ce fichier) ; player : apprenant ;
 # - episodes : episodes par generation ; generations : en auto-jeu, chaque

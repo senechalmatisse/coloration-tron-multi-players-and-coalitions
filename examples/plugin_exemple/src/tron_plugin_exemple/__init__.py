@@ -1,4 +1,4 @@
-"""Extension d'exemple (P12) : un agent et une heuristique pour Tron.
+"""Extension d'exemple : un agent et une heuristique pour Tron.
 
 Les classes ne sont pas décorées par ``register_agent`` : c'est la déclaration
 d'entry point (``pyproject.toml``) qui leur donne leur nom dans Tron.

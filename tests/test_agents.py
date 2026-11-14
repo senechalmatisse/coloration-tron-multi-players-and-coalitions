@@ -1,4 +1,4 @@
-"""Tests des agents et des moteurs de recherche (jalons J3, J4, J5)."""
+"""Tests des agents et des moteurs de recherche."""
 
 from __future__ import annotations
 
@@ -64,7 +64,7 @@ def snapshot(st: GameState) -> tuple:
     return st.grid.tobytes(), st.heads.tobytes(), st.alive.tobytes(), st.current, st.ply, st.key
 
 
-# ------------------------------------------------------------- J3 : base
+# base
 def test_registry_and_errors() -> None:
     assert {"random", "greedy", "negamax", "paranoid", "maxn", "social"} <= set(AGENTS)
     cfg = make_config(8, 8, 3)
@@ -135,7 +135,7 @@ def test_no_legal_move_returns_pass() -> None:
 
 @pytest.mark.slow
 def test_greedy_beats_random_in_duels() -> None:
-    """J3 : le glouton gagne au moins 90 % des parties à deux joueurs contre l'aléatoire."""
+    """Le glouton gagne au moins 90 % des parties à deux joueurs contre l'aléatoire."""
     wins = 0
     games = 40
     for g in range(games):
@@ -165,7 +165,7 @@ def test_tie_break_modes() -> None:
     assert rand == [GreedyAgent(0, cfg.with_seed(s)).choose_move(st).move for s in range(30)]
 
 
-# ------------------------------------------------------ J4 : élagage exact
+# Elagage exact
 def _two_camp(st: GameState, p: int) -> dict:
     return {
         "coeffs": ((p, 1.0),),
@@ -262,7 +262,7 @@ def test_two_players_all_algorithms_agree() -> None:
     assert checked >= 15
 
 
-# ---------------------------------------------------------- J5 : équipes
+# Equipes
 def test_social_profiles_reproduce_reference_agents() -> None:
     rng = random.Random(21)
     for _ in range(10):
@@ -342,7 +342,7 @@ def test_two_team_reduction_matches_vector_search_without_eliminations() -> None
     assert checked >= 5
 
 
-# ----------------------------------------------------- matrices et bornes
+# matrices et bornes
 def test_social_matrices_and_reductions() -> None:
     team = [0, 1, 0, 1]
     alive = [True] * 4

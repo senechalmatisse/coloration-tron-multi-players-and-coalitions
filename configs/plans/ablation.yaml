@@ -1,4 +1,4 @@
-# P06 : ablation de l'heuristique composite du solitaire, une composante mise a
+# Ablation de l'heuristique composite du solitaire, une composante mise a
 # zero a la fois (les autres poids restent ceux par defaut, renormalises).
 # La contribution marginale d'une composante est l'ecart apparie de taux de
 # victoire entre l'heuristique complete (ablate: none) et l'heuristique privee

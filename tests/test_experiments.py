@@ -1,4 +1,4 @@
-"""Tests des plans d'expériences, des scénarios et de l'exécution (F5.3 à F5.5)."""
+"""Tests des plans d'expériences, des scénarios et de l'exécution."""
 
 from __future__ import annotations
 

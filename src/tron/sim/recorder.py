@@ -1,4 +1,4 @@
-"""Journal de partie rejouable au format JSON Lines (F5.2).
+"""Journal de partie rejouable au format JSON Lines.
 
 Première ligne : ``{"type": "header", ...}`` avec la configuration complète et
 les positions initiales ; puis une ligne ``{"type": "move", ...}`` par demi-coup
@@ -81,7 +81,7 @@ def move_record(event: MoveEvent, details: bool = True) -> dict[str, Any]:
 class Recorder:
     """Observateur qui écrit le journal JSONL d'une partie.
 
-    Pour une partie reprise depuis une sauvegarde (P08), ``Match.prior_moves``
+    Pour une partie reprise depuis une sauvegarde, ``Match.prior_moves``
     contient les lignes ``move`` déjà jouées : elles sont réécrites après
     l'en-tête, si bien que le journal reste complet et rejouable.
     """

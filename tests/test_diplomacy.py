@@ -1,4 +1,4 @@
-"""Tests de la diplomatie tactique (P03)."""
+"""Tests de la diplomatie tactique."""
 
 from __future__ import annotations
 
@@ -39,7 +39,7 @@ def _state(n: int = 4, **spec: Any) -> DiplomacyState:
     return DiplomacyState(DiplomacySpec(enabled=True, **spec), n)
 
 
-# ------------------------------------------------------------ gestionnaire
+# gestionnaire
 def test_unilateral_proposal_stays_pending() -> None:
     d = _state()
     events = d.propose(0, 1, ply=0)
@@ -145,7 +145,7 @@ def test_duplicates_caps_and_rejected_intents() -> None:
     assert summarize_diplomacy(d.events, 5).rejected_intents == 2
 
 
-# ------------------------------------------------------------ configuration
+# configuration
 def test_config_validation_and_roundtrip(tmp_path: Path) -> None:
     base = {"grid": 8, "players": ["a", "b", "c"]}
     cfg = GameConfig.from_dict({**base, "diplomacy": {"enabled": True, "betrayal_penalty": 0.2}})
@@ -216,7 +216,7 @@ def test_tactical_policy_against_the_leader() -> None:
     assert tactical_intent(0, team, alive, shares, _snapshot(4, ((0, 3),)), 1) is None
 
 
-# ------------------------------------------------------------------- parties
+# parties
 def _dipl_config(seed: int = 1, enabled: bool = True) -> GameConfig:
     return GameConfig.from_dict(
         {
@@ -332,7 +332,7 @@ def test_social_agent_without_diplomacy_keeps_static_matrix() -> None:
         SocialAgent(1, cfg, profile="dynamic_team", break_margin=2.0)
 
 
-# ----------------------------------------------------------- journal et métriques
+# journal et métriques
 def test_log_records_and_replays_diplomacy(tmp_path: Path) -> None:
     path = tmp_path / "d.jsonl"
     m = Match(_dipl_config(seed=0), observers=[Recorder(path)])

@@ -1,4 +1,4 @@
-"""Tests de la sauvegarde et de la reprise exacte d'une partie (P08)."""
+"""Tests de la sauvegarde et de la reprise exacte d'une partie."""
 
 from __future__ import annotations
 
@@ -22,9 +22,9 @@ CONFIG = {
     "diplomacy": {"enabled": True, "betrayal_penalty": 0.2},
     "players": [
         {"name": "par", "team": "A", "agent": "paranoid", "depth": 3},
-        {"name": "dyn", "team": "B", "agent": "social", "depth": 2, "profile": "dynamic_team"},
+        {"name": "dyn", "team": "B", "agent": "social",   "depth": 2, "profile": "dynamic_team"},
         {"name": "ada", "team": "C", "agent": "adaptive", "depth": 2, "adaptation_rate": 0.5},
-        {"name": "mc", "team": "D", "agent": "mcts", "simulations": 30},
+        {"name": "mc",  "team": "D", "agent": "mcts",     "simulations": 30},
         {"name": "rnd", "team": "B", "agent": "random"},
     ],
 }
@@ -44,7 +44,7 @@ def _signature(e: Any) -> tuple[Any, ...]:
     )
 
 
-# ------------------------------------------------------------------- état
+# état
 def test_state_snapshot_roundtrip_restores_every_field() -> None:
     rng = random.Random(4)
     cfg = make_config(9, 7, 4, teams=["A", "B", "A", "C"], seed=2)
@@ -97,7 +97,7 @@ def test_inconsistent_snapshots_are_rejected(corrupt: Any) -> None:
         GameState.from_snapshot(cfg, data)
 
 
-# ----------------------------------------------------------------- partie
+# partie
 @pytest.mark.parametrize("cut", [0, 9, 31])
 def test_resumed_game_is_identical_to_uninterrupted_game(tmp_path: Path, cut: int) -> None:
     cfg = GameConfig.from_dict(CONFIG)

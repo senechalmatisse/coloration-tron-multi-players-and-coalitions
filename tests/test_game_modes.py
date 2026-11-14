@@ -1,4 +1,4 @@
-"""Tests des modes de jeu (P09)."""
+"""Tests des modes de jeu."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ def _cfg(
     return GameConfig.from_dict(data)
 
 
-# ----------------------------------------------------------------- survie
+# survie
 @pytest.mark.parametrize(
     "rules",
     [
@@ -148,7 +148,7 @@ def test_classic_zobrist_keys_unchanged() -> None:
     assert (len(keys), keys[0], keys[-1]) == (41, 2498487232173843075, 3013909396529148895)
 
 
-# --------------------------------------------------------- contrôle de zone
+# contrôle de zone
 def _zone_cfg(**rules: object) -> GameConfig:
     base = {
         "grid": 7,
@@ -357,13 +357,13 @@ def test_zone_rendering_and_panel_status() -> None:
     plain = GameState(make_config(7, 7, 3))
     assert not (render_frame(plain, pal, cell=8, labels=False) == pal.ink_secondary).all(-1).any()
     ctl = PlaybackController(LiveSource(cfg), paused=True)
-    assert ctl.panel().status.endswith("· tour 0 · A 0 – B 0")
+    assert ctl.panel().status.endswith("· tour 0 · A 0 - B 0")
     for _ in range(3):
         ctl.step_forward()
     assert "· tour 1 · " in ctl.panel().status
 
 
-# ------------------------------------------------------ obstacles dynamiques
+# obstacles dynamiques
 def _obst_cfg(seed: int = 4, grid: int = 9, **obstacles: object) -> GameConfig:
     spec = {"every": 2, "count": 3, "max": 12, **obstacles}
     return GameConfig.from_dict(
@@ -617,7 +617,7 @@ def test_obstacle_rendering() -> None:
     assert cells and all(tuple(img[y, x]) == pal.muted for x, y in cells)
 
 
-# --------------------------------------------------- objectifs asymetriques
+# objectifs asymetriques
 def _hunt_cfg(objectives: object, teams: list[str] | None = None) -> GameConfig:
     return _cfg(
         n=3,

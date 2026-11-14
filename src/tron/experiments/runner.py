@@ -1,4 +1,4 @@
-"""Exécution parallèle d'un plan d'expériences (F5.4).
+"""Exécution parallèle d'un plan d'expériences.
 
 Chaque partie est une fonction pure de sa configuration et de sa graine : le
 résultat ne dépend pas de l'ordonnancement entre processus. Les lignes sont

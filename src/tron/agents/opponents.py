@@ -1,4 +1,4 @@
-"""Modèle d'adversaire léger, explicable et déterministe (P05).
+"""Modèle d'adversaire léger, explicable et déterministe.
 
 Le modèle ne devine pas une intention : il estime des probabilités de profils
 à partir de choix observables. Pour chaque coup d'un adversaire q, il compare le
@@ -28,8 +28,7 @@ s_k = (Σ alignements + κ·½) / (n_k + κ) sur la fenêtre (κ = ``prior`` obs
 fictives d'alignement ½, ce qui tire vers l'indifférence quand les données
 manquent). Logits z_k = β·(s_k − ½) pour les quatre profils comportementaux et
 z_random_like = β·``margin`` ; probabilités = softmax(z). Un joueur au hasard a des
-alignements de moyenne ½ et ressort ``random_like``. La confiance est la plus
-grande probabilité.
+alignements de moyenne ½ et ressort ``random_like``. La confiance est la plus grande probabilité.
 """
 
 from __future__ import annotations

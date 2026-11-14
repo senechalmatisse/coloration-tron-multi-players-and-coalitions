@@ -78,7 +78,7 @@ _DARK = (8, 12, 20)
 _GLASS = (12, 22, 38)
 
 
-# ------------------------------------------------------------ rastérisation
+# rastérisation
 def _stamp_rect(canvas: np.ndarray, x0: float, x1: float, y0: float, y1: float) -> None:
     """Ajoute à ``canvas`` la couverture exacte (filtre boîte) du rectangle donné."""
     if x1 <= x0 or y1 <= y0:
@@ -165,7 +165,7 @@ def trail_tiles(metrics: TrailMetrics) -> TrailTiles:
     return TrailTiles(metrics, tuple(glow), tuple(core))
 
 
-# ------------------------------------------------------------ formes (SDF)
+# formes (SDF)
 def _sd_round_box(
     u: np.ndarray, v: np.ndarray, cu: float, cv: float, hu: float, hv: float, r: float
 ) -> np.ndarray:
@@ -283,7 +283,7 @@ def obstacle_tile(cell: int, fill: RGB, edge: RGB) -> np.ndarray:
     return _to_rgba8(canvas)
 
 
-# ------------------------------------------------------------------- fond
+# fond
 @lru_cache(maxsize=8)
 def arena_background(
     width: int, height: int, cell: int, theme: NeonTheme, quality: Quality
@@ -336,7 +336,7 @@ def arena_background(
     return np.clip(np.rint(img), 0, 255).astype(np.uint8)
 
 
-# ----------------------------------------------------------- composition
+# composition
 def _add_patch(
     img: np.ndarray, patch: np.ndarray, color: Sequence[float], x0: int, y0: int, gain: float = 1.0
 ) -> None:
@@ -417,7 +417,7 @@ def default_heading(state: GameState, player: int) -> int:
     return 2 if dy >= 0 else 0
 
 
-# ------------------------------------------------------------- rendu NumPy
+# rendu NumPy
 class NeonRenderer:
     """Rendu néon d'une partie en images RGB ``uint8`` (exports GIF/MP4, captures).
 
@@ -452,12 +452,12 @@ class NeonRenderer:
         self._own: SceneTracker | None = None
         self._version = -1
 
-    # ------------------------------------------------------------ repères
+    # repères
     def to_px(self, x: float, y: float) -> tuple[float, float]:
         """Position en pixels d'un point exprimé en cases."""
         return self.pad + x * self.cell, self.pad + y * self.cell
 
-    # ------------------------------------------------------------- traces
+    # traces
     def _stamp(self, player: int, cell: Cell, mask: int, sign: float) -> None:
         m = self.metrics.margin
         x0 = self.pad + cell[0] * self.cell - m
@@ -488,7 +488,7 @@ class NeonRenderer:
         self._tracker = tracker
         self._version = tracker.version
 
-    # -------------------------------------------------------------- image
+    # image
     def render(
         self,
         state: GameState,

@@ -1,4 +1,4 @@
-"""Plusieurs parties d'une configuration, en parallèle, et un résumé (API publique, P11).
+"""Plusieurs parties d'une configuration, en parallèle, et un résumé.
 
 python examples/campagne.py configs/games/teams_2v2_20x20.yaml 8 2
 """

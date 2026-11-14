@@ -1,4 +1,4 @@
-"""Tables de hachage de Zobrist (F3.6).
+"""Tables de hachage de Zobrist.
 
 La clé d'un état combine par XOR : les cases occupées, la position de la tête de
 chaque joueur vivant, l'ensemble des joueurs vivants et le joueur au trait ; dans
@@ -34,16 +34,16 @@ class ZobristTables:
     alive: list[int]
     turn: list[int]
     obst: list[int]
-    """Case occupée par un obstacle dynamique (P09.3), distincte d'un mur de joueur."""
+    """Case occupée par un obstacle dynamique, distincte d'un mur de joueur."""
 
     @staticmethod
     def round_key(rounds: int) -> int:
-        """Valeur de hachage du nombre de tours complets (modes à règles, P09)."""
+        """Valeur de hachage du nombre de tours complets (modes à règles)."""
         return hash_index(_SEED, _ROUND_SALT, rounds)
 
     @staticmethod
     def score_key(team: int, score: int) -> int:
-        """Valeur de hachage du score d'une équipe de victoire (contrôle de zone, P09.2)."""
+        """Valeur de hachage du score d'une équipe de victoire (contrôle de zone)."""
         return hash_index(_SEED, _SCORE_SALT, team, score)
 
 

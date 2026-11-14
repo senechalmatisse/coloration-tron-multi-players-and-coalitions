@@ -7,8 +7,8 @@
   rampe séquentielle bleue, échelle commune) ;
 * coût de calcul (nœuds par décision, échelle logarithmique).
 
-Charte : surface claire, marques fines (lignes de 2 px, marqueurs de 8 px
-cerclés), grille en filet discret, légende systématique dès deux séries,
+Charte : surface claire, marques fines (lignes de 2 px, marqueurs de 8 px cerclés),
+grille en filet discret, légende systématique dès deux séries,
 couleur attachée à la valeur du facteur et jamais à son rang.
 """
 
@@ -238,7 +238,7 @@ def heatmaps(
     value: str = "win_rate",
     annotate: bool = False,
 ) -> Path:
-    """Cartes de chaleur ``x`` × ``y`` (une par couple ``row`` × ``col``), échelle 0–100 %."""
+    """Cartes de chaleur ``x`` × ``y`` (une par couple ``row`` × ``col``), échelle 0-100 %."""
     plt = _plt()
     from matplotlib.colors import LinearSegmentedColormap  # noqa: PLC0415
 

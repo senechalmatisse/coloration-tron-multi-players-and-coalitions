@@ -1,7 +1,7 @@
-# Heuristique multicritere (P01) : territoire de Voronoi, mobilite, sorties,
+# Heuristique multicritere : territoire de Voronoi, mobilite, sorties,
 # marge avant enfermement et controle des passages (points d'articulation).
 # Les poids sont normalises automatiquement a une somme de 1.
-# p1 est un agent MCTS (P04) : 1000 simulations par decision.
+# p1 est un agent MCTS : 1000 simulations par decision.
 name: composite_example
 grid: 20
 seed: 42

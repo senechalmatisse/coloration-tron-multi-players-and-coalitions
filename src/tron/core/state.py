@@ -1,8 +1,8 @@
-"""État du jeu et règles (F1.1 à F1.5, F1.8).
+"""État du jeu et règles.
 
 Représentation (§6.3) : grille aplatie ``int8`` de taille (H+2) × (W+2) avec une
 bordure sentinelle (−2), −1 pour une case libre, ``i`` pour un mur du joueur i
-(la tête comprise) et −3 pour un obstacle dynamique (P09.3). La case (x, y) a
+(la tête comprise) et −3 pour un obstacle dynamique. La case (x, y) a
 l'indice ``(y+1)·(W+2) + (x+1)`` ; nord = y − 1.
 
 ``apply`` et ``undo`` modifient l'état en place, sans copie : un historique
@@ -31,7 +31,7 @@ BORDER = -2
 
 @dataclass(frozen=True, slots=True)
 class Outcome:
-    """Issue d'une partie terminée (F1.5)."""
+    """Issue d'une partie terminée."""
 
     winning_team: int
     winners: tuple[int, ...]
@@ -146,7 +146,7 @@ class GameState:
         self.n_moves = 0
         self.elim_order: list[int] = []
         self._hist: list[tuple[int, int, int, int]] = []
-        # Règles (P09) : tours complets, scores par équipe de victoire, obstacles.
+        # Règles : tours complets, scores par équipe de victoire, obstacles.
         self.round = 0
         self.scores = [0] * self.n_teams
         self.n_obstacles = 0
@@ -161,7 +161,7 @@ class GameState:
         self._a = memoryview(self.alive)
         self._d = memoryview(self.death_ply)
 
-    # ------------------------------------------------------------ coordonnées
+    # coordonnées
     def index(self, x: int, y: int) -> int:
         """Indice aplati de la case (x, y)."""
         return (y + 1) * self.stride + x + 1
@@ -189,7 +189,7 @@ class GameState:
         s = self.current if start is None else start
         return [q for k in range(self.n) if self._a[q := (s + k) % self.n]]
 
-    # ----------------------------------------------------------------- règles
+    # règles
     def legal_moves(self, player: int | None = None) -> list[int]:
         """Directions menant à une case libre (F1.3)."""
         p = self.current if player is None else player
@@ -221,8 +221,8 @@ class GameState:
     def apply(self, direction: int) -> bool:
         """Joue le coup du joueur au trait ; renvoie ``False`` s'il est éliminé.
 
-        Un coup hors grille, sur une case occupée ou ``PASS`` élimine le joueur
-        (F1.4) : ses murs restent en place et il sort de la rotation.
+        Un coup hors grille, sur une case occupée ou ``PASS`` élimine le joueur :
+        ses murs restent en place et il sort de la rotation.
         """
         p = self.current
         h = self._h[p]
@@ -293,7 +293,7 @@ class GameState:
         return p
 
     def is_terminal(self) -> bool:
-        """Vrai quand la partie est finie : une seule équipe de victoire en vie (F1.5, P09).
+        """Vrai quand la partie est finie : une seule équipe de victoire en vie.
 
         L'indicateur ``over`` est tenu à jour par ``apply`` et ``undo`` ; les moteurs
         de recherche le lisent directement.
@@ -313,7 +313,7 @@ class GameState:
 
     def end_reason(self) -> str:
         """Cause de fin de partie (``elimination``, ``survive``, ``target_score``,
-        ``max_rounds``), chaîne vide si la partie continue (P09)."""
+        ``max_rounds``), chaîne vide si la partie continue."""
         if not self.over:
             return ""
         return "elimination" if self._rules is None else self._rules.end_reason(self)
@@ -345,7 +345,7 @@ class GameState:
         )
 
     def last_obstacles(self) -> list[tuple[int, int]]:
-        """Cases (x, y) des obstacles posés par le dernier demi-coup (P09.3)."""
+        """Cases (x, y) des obstacles posés par le dernier demi-coup."""
         if not self._rhist or self._rhist[-1] is None:
             return []
         return [self.coords(c) for c in self._rhist[-1][1]]
@@ -359,7 +359,7 @@ class GameState:
         """
         return self._hist
 
-    # ---------------------------------------------------------------- outils
+    # outils
     def copy(self, history: bool = True) -> GameState:
         """Copie indépendante ; sans ``history``, les coups antérieurs ne peuvent être défaits."""
         new = GameState.__new__(GameState)
@@ -465,7 +465,7 @@ class GameState:
         state.key = state.compute_key()
         return state
 
-    # ------------------------------------------------------------ instantané
+    # instantané
     def to_snapshot(self) -> dict[str, Any]:
         """Instantané sérialisable (JSON) de tout l'état, historique ``apply``/``undo`` compris.
 

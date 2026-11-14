@@ -1,4 +1,4 @@
-# Duel MCTS (P04) contre Paranoid sur une petite grille (demonstration rapide).
+# Duel MCTS contre Paranoid sur une petite grille (demonstration rapide).
 # Parametres MCTS : simulations par decision, constante d'exploration UCT,
 # politique de simulation (random ou greedy) et longueur maximale d'une simulation.
 name: mcts_duel

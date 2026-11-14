@@ -1,6 +1,6 @@
 # Agents
 
-`tron agents list` affiche les agents disponibles (intégrés et extensions) avec leurs paramètres ; pour distribuer un agent dans un paquet séparé, voir `docs/extensions.md`.
+`tron agents list` affiche les agents disponibles (intégrés et extensions) avec leurs paramètres.
 
 ## 1. Contrat d'un agent
 
@@ -25,7 +25,7 @@ class PrudentAgent(Agent):
             state.undo()                              # l'état reçu doit être restauré
         best = max(scores.values())
         ties = [m for m in moves if scores[m] == best]
-        move = self.pick(ties)                        # départage F3.7 (graine ou N, E, S, O)
+        move = self.pick(ties)                        # départage (graine ou N, E, S, O)
         return move, SearchStats(nodes=len(moves), depth=1, ties=len(ties), engine=self.name)
 ```
 
@@ -51,8 +51,8 @@ Règles :
 | Crochet | Par défaut | Usage |
 |---|---|---|
 | `_decide_with_context(state, moves, context)` | appelle `_decide` | agents qui exploitent le contexte (diplomatie) |
-| `_diplomacy(state, move, context)` | `None` | intention diplomatique de fin de décision (P03) |
-| `observe_move(player, direction, origin, target, eliminated, state)` | rien | observer chaque demi-coup de la partie (P05) ; `state` est l'état réel après le coup, à ne pas modifier |
+| `_diplomacy(state, move, context)` | `None` | intention diplomatique de fin de décision |
+| `observe_move(player, direction, origin, target, eliminated, state)` | rien | observer chaque demi-coup de la partie ; `state` est l'état réel après le coup, à ne pas modifier |
 | `reset()` | rien | réinitialiser la mémoire entre deux parties (appelé par `Match`) |
 
 `DecisionContext` contient le demi-coup courant et, si la diplomatie est active, un `DiplomacySnapshot` (voir `docs/coalitions-dynamiques.md`). Un agent externe dont `choose_move` n'accepte pas `context` est appelé sans contexte.
@@ -61,15 +61,15 @@ Règles :
 
 | Agent | Algorithme | Paramètres principaux |
 |---|---|---|
-| `random` | coup sûr tiré au hasard | – |
+| `random` | coup sûr tiré au hasard | - |
 | `greedy` | profondeur 1, maximise sa part de l'heuristique | `tie_break` |
 | `negamax` | negamax alpha-bêta, deux joueurs (référence) | `depth` |
 | `paranoid` | alpha-bêta deux camps : tous contre la racine | `depth`, `rounds`, `ordering`, `iterative_deepening`, `tt`, `time_limit` |
 | `maxn` | MaxN avec élagage superficiel de Korf | `depth`, `pruning` |
 | `social` | matrice de préférences W (SOS) | `profile` (`maxn`, `paranoid`, `team`, `team_paranoid`, `custom`, `dynamic_team`), `alpha`, `matrix`, `engine`, `diplomacy`, `break_margin` |
-| `mcts` | MCTS / UCT multijoueur à utilité vectorielle (P04) | `simulations`, `exploration`, `rollout_policy`, `rollout_depth`, `time_limit`, `profile`, `alpha` |
-| `adaptive` | modèle d'adversaires et ajustement borné des poids (P05) | `adaptation_rate`, `observation_window`, `fallback_agent`, `fallback_profile`, `min_confidence`, `cooperation_threshold`, `diplomacy` |
-| `learned` | politique linéaire apprise sur les états après coup (P10, `docs/learning.md`) | `model` (fichier `model.json`), `epsilon` |
+| `mcts` | MCTS / UCT multijoueur à utilité vectorielle | `simulations`, `exploration`, `rollout_policy`, `rollout_depth`, `time_limit`, `profile`, `alpha` |
+| `adaptive` | modèle d'adversaires et ajustement borné des poids | `adaptation_rate`, `observation_window`, `fallback_agent`, `fallback_profile`, `min_confidence`, `cooperation_threshold`, `diplomacy` |
+| `learned` | politique linéaire apprise sur les états après coup (`docs/learning.md`) | `model` (fichier `model.json`), `epsilon` |
 
 Paramètres communs : `depth` (plies) ou `rounds` (tours complets : rounds × joueurs vivants), `tie_break` (`random` ou `fixed`).
 
@@ -125,5 +125,3 @@ agents = build_agents(config)                     # un agent par joueur
 agent = make_agent("mcts", 0, config, simulations=200)
 sorted(AGENTS)                                    # agents enregistrés
 ```
-
-Les agents d'autres paquets s'ajoutent sans modifier ce dépôt par des points d'entrée `tron.agents` (voir `docs/extensions.md`).

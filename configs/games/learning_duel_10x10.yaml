@@ -1,4 +1,4 @@
-# Duel d'apprentissage (P10) sur une grille 10 x 10. Le joueur 0 est l'apprenant
+# Duel d'apprentissage sur une grille 10 x 10. Le joueur 0 est l'apprenant
 # dans l'environnement (tron.learning.TronEnv) : son agent ci-dessous ne sert que
 # lorsque la configuration est jouee directement (tron play).
 #   tron train configs/training/linear_duel.yaml --out models/linear_duel

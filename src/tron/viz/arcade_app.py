@@ -1,4 +1,4 @@
-"""Fenêtre arcade 3.3 : temps réel et rejeu (F6.1 à F6.3).
+"""Fenêtre arcade 3.3 : temps réel et rejeu.
 
 Touches :
 
@@ -121,7 +121,7 @@ class TronWindow(arcade.Window if arcade is not None else object):  # type: igno
         self._camera: Any = None
         self._setup_scene()
 
-    # --------------------------------------------------------------- scène
+    # scène
     @property
     def neon(self) -> bool:
         return self.theme_name == "neon"
@@ -303,7 +303,7 @@ class TronWindow(arcade.Window if arcade is not None else object):  # type: igno
             self.cells[int(y) * w + int(x)].color = tuple(int(c) for c in colors[y, x])
         self._colors = colors
 
-    # ------------------------------------------------------------- dessin
+    # dessin
     def on_draw(self) -> None:
         if self.neon:
             self._draw_neon()
@@ -415,7 +415,7 @@ class TronWindow(arcade.Window if arcade is not None else object):  # type: igno
         for t in self.t_help:
             t.draw()
 
-    # ------------------------------------------------------- dessin (néon)
+    # dessin (néon)
     def _sync_neon(self) -> None:
         ctl = self.controller
         st = ctl.source.state
@@ -531,7 +531,7 @@ class TronWindow(arcade.Window if arcade is not None else object):  # type: igno
             self._clock,
         )
 
-    # ---------------------------------------------------------- événements
+    # événements
     def on_update(self, delta_time: float) -> None:
         ctl = self.controller
         ctl.update(delta_time)

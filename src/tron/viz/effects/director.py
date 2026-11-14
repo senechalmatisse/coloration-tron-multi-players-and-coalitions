@@ -95,7 +95,7 @@ class EffectDirector:
         self._shake_amp = 0.0
         self._move_acc = 0.0
 
-    # ----------------------------------------------------------- réglages
+    # réglages
     def set_quality(self, quality: Quality | str) -> None:
         self.quality = resolve_quality(quality)
         old = self.particles
@@ -110,7 +110,7 @@ class EffectDirector:
         self._flash_start = -math.inf
         self._shake_start = -math.inf
 
-    # ------------------------------------------------------------- lecture
+    # lecture
     def fade(self, player: int) -> float:
         """Avancement (0 → 1) de l'extinction de la trace d'un joueur éliminé."""
         start = self.deaths.get(player)
@@ -150,14 +150,14 @@ class EffectDirector:
             or any(self.time - s < DEATH_FADE for s in self.deaths.values())
         )
 
-    # ------------------------------------------------------------ évolution
+    # évolution
     def update(self, dt: float) -> None:
         self.time += max(0.0, dt)
         self.particles.update(dt)
         self.rings = self.active_rings()
         self.links = self.active_links()
 
-    # ------------------------------------------------------------ événements
+    # événements
     def handle(
         self,
         result: SyncResult,
@@ -184,7 +184,7 @@ class EffectDirector:
             if handler is not None:
                 handler(self, ev, tracker, state, calm)
 
-    # ------------------------------------------------------------ effets
+    # effets
     def _scale(self, n: float) -> int:
         return max(0, round(n * self.quality.particle_scale))
 

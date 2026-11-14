@@ -1,4 +1,4 @@
-"""Territoire de Voronoi (F2.1, F2.2, F2.4).
+"""Territoire de Voronoi.
 
 Parcours en largeur simultané depuis la tête de chaque joueur vivant. Chaque case
 libre reçoit le masque binaire des joueurs qui l'atteignent à distance minimale
@@ -9,7 +9,7 @@ tête compte dans le territoire de son joueur : tout joueur vivant a une part
 strictement positive. Les parts sont normalisées sur les cases attribuées, d'où
 Σ h = 1 dans les deux modes.
 
-Variante F2.4 (``separation=True``) : les joueurs dont la région n'est reliée à
+Variante (``separation=True``) : les joueurs dont la région n'est reliée à
 aucun autre joueur sont évalués par une borne de remplissage, la parité en damier
 (un chemin alterne les couleurs) : au plus 2·min(r, s) + [r > s] coups, avec r
 cases de la couleur opposée à la tête et s cases de sa couleur.
@@ -297,8 +297,7 @@ class VoronoiHeuristic(Heuristic):
 def warmup() -> None:
     """Déclenche la compilation (ou le chargement du cache) du noyau.
 
-    À appeler avant toute mesure de temps : la compilation JIT est exclue des
-    mesures (§7.3).
+    À appeler avant toute mesure de temps : la compilation JIT est exclue des mesures.
     """
     from tron.core.config import GameConfig  # noqa: PLC0415 - import local pour un usage ponctuel
 

@@ -2,8 +2,7 @@
 
 Les noyaux (parcours en largeur de Voronoi) sont écrits dans un style procédural
 compatible Numba : tableaux NumPy, entiers, boucles simples. Si Numba est absent
-ou si ``NUMBA_DISABLE_JIT=1``, ils s'exécutent en Python pur, avec le même
-résultat mais plus lentement.
+ou si ``NUMBA_DISABLE_JIT=1``, ils s'exécutent en Python pur, avec le même résultat mais plus lentement.
 """
 
 from __future__ import annotations

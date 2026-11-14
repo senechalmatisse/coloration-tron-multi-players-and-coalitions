@@ -1,4 +1,4 @@
-"""Tests de l'agent Monte-Carlo Tree Search (P04)."""
+"""Tests de l'agent Monte-Carlo Tree Search."""
 
 from __future__ import annotations
 

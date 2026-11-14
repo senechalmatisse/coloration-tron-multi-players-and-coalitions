@@ -1,4 +1,4 @@
-"""Interface des heuristiques et registre (extensibilité, §4)."""
+"""Interface des heuristiques et registre."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from tron.core.state import GameState
 
 
 class Heuristic(ABC):
-    """Évaluation d'un état non terminal par un vecteur de parts h (F2.2).
+    """Évaluation d'un état non terminal par un vecteur de parts h.
 
     ``shares`` renvoie h(i) ≥ 0 pour chaque joueur, nul pour les joueurs
     éliminés, avec Σ h(i) = 1 sur les joueurs vivants.
@@ -56,7 +56,7 @@ def make_heuristic(
         if any(ch in spec.name for ch in ":./"):
             hint = (
                 " ; un chemin de module n'est jamais chargé depuis une configuration : "
-                "déclarer un entry point tron.heuristics (docs/extensions.md)"
+                "déclarer un entry point tron.heuristics"
             )
         raise ValueError(
             f"heuristique inconnue : {spec.name} (connues : {sorted(HEURISTICS)}){hint}"

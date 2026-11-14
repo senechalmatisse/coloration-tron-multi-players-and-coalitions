@@ -1,4 +1,4 @@
-# P06 : courbe du taux de victoire de MCTS selon le nombre de simulations,
+# Courbe du taux de victoire de MCTS selon le nombre de simulations,
 # en duel contre Paranoid de profondeur 3 (graines appariees entre niveaux).
 name: mcts_simulations
 description: Taux de victoire de MCTS selon le nombre de simulations.

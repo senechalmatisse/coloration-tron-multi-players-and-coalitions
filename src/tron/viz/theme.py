@@ -7,8 +7,7 @@ valeurs, ce qui garantit des images identiques dans les deux cas.
 * **Couleurs.** Une teinte néon par équipe, dans un ordre fixe ; les membres
   d'une même équipe en reçoivent des nuances (comme la palette classique). Le
   numéro du joueur reste inscrit près de sa moto : l'identité ne repose pas sur
-  la seule couleur. Le thème ``classic`` (palette validée pour les daltoniens)
-  reste disponible.
+  la seule couleur. Le thème ``classic`` (palette validée pour les daltoniens) reste disponible.
 * **Tailles.** Les épaisseurs des traces et les rayons de lueur sont des
   fractions de la taille d'une case : l'aspect ne dépend pas de la résolution.
 * **Qualité.** ``low`` (traces à deux couches, pas d'animation de fond, peu de
@@ -198,7 +197,7 @@ def next_quality(quality: Quality) -> Quality:
     return QUALITIES[QUALITY_NAMES[(i + 1) % len(QUALITY_NAMES)]]
 
 
-# ---------------------------------------------------------------- animations
+# animations
 PULSE_SPEED = 5.0
 """Pulsation de la lueur des motos : rayon relatif ``1 + 0,2 · sin(5 t)``."""
 PULSE_DEPTH = 0.2
@@ -227,7 +226,7 @@ def pulse(t: float, enabled: bool = True) -> float:
     return 1.0 + PULSE_DEPTH * math.sin(PULSE_SPEED * t) if enabled else 1.0
 
 
-# ------------------------------------------------------------------ tailles
+# tailles
 @dataclass(frozen=True, slots=True)
 class TrailMetrics:
     """Géométrie des traces lumineuses pour une taille de case (pixels)."""
@@ -285,7 +284,7 @@ def major_step(width: int, height: int) -> int:
     return 10 if max(width, height) > 30 else 5
 
 
-# ------------------------------------------------------------------- thème
+# thème
 @dataclass(frozen=True, slots=True)
 class NeonTheme:
     """Couleurs du thème néon pour une partie (une teinte par équipe)."""

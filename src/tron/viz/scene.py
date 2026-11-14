@@ -151,7 +151,7 @@ class SceneTracker:
         self.version = 0
         """Incrémenté à chaque changement (cache des rendus)."""
 
-    # --------------------------------------------------------------- lecture
+    # lecture
     @property
     def n(self) -> int:
         return len(self.paths)
@@ -165,7 +165,7 @@ class SceneTracker:
     def head(self, player: int) -> Cell:
         return self.paths[player][-1]
 
-    # ------------------------------------------------------------ synchronisation
+    # synchronisation
     def reset(self, state: GameState) -> None:
         self._state = state
         self._positions = tuple(state.positions)
@@ -361,7 +361,7 @@ def _victory(state: GameState) -> VisualEvent:
     )
 
 
-# --------------------------------------------------------------- coalitions
+# coalitions
 def alliance_pairs(events: Iterable[AllianceEvent]) -> tuple[tuple[int, int], ...]:
     """Alliances actives après une suite d'événements diplomatiques."""
     active: set[tuple[int, int]] = set()
@@ -383,7 +383,7 @@ def team_links(state: GameState) -> tuple[tuple[int, int], ...]:
     return tuple((a, b) for i, a in enumerate(alive) for b in alive[i + 1 :] if team[a] == team[b])
 
 
-# --------------------------------------------------------------- territoires
+# territoires
 def territory_edges(owners: np.ndarray) -> list[tuple[float, float, float, float]]:
     """Frontières entre territoires de Voronoi : segments ``(x0, y0, x1, y1)`` en cases.
 

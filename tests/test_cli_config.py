@@ -1,4 +1,4 @@
-"""Outils de configuration et documentation exécutable (P15)."""
+"""Outils de configuration et documentation exécutable."""
 
 from __future__ import annotations
 

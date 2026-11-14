@@ -1,4 +1,4 @@
-"""Agent Monte-Carlo Tree Search à utilité vectorielle (P04).
+"""Agent Monte-Carlo Tree Search à utilité vectorielle.
 
 Chaque nœud mémorise le nombre de visites et la **somme des vecteurs de
 récompense** (une composante par joueur) des simulations qui l'ont traversé.
@@ -21,12 +21,11 @@ restauration garantie par ``try/finally``) :
    qui maximise le nombre de cases libres voisines de la case d'arrivée, départage
    au hasard), jusqu'à la fin de partie ou ``rollout_depth`` demi-coups ;
 4. **évaluation** : :meth:`~tron.eval.valuation.Valuation.vector` de l'état atteint,
-   vu de la racine (victoire dominante, parts de l'heuristique sinon, défaites
-   datées) ;
+   vu de la racine (victoire dominante, parts de l'heuristique sinon, défaites datées) ;
 5. **rétropropagation** du vecteur brut sur le chemin.
 
 Coup joué : l'enfant de la racine le plus visité ; à égalité, la règle de
-départage de l'agent (F3.7). Aucun élagage alpha-bêta ou de Korf n'est utilisé.
+départage de l'agent. Aucun élagage alpha-bêta ou de Korf n'est utilisé.
 
 Statistiques : ``nodes`` = nœuds créés (racine comprise), ``leaves`` = simulations,
 ``depth`` = profondeur maximale de l'arbre atteinte, ``ties`` = coups racine à
@@ -129,7 +128,7 @@ class MCTSAgent(Agent):
         self.last_root: dict[int, tuple[int, float]] = {}
         """Dernière décision : coup racine → (visites, utilité moyenne pour l'agent)."""
 
-    # ----------------------------------------------------------------- outils
+    # outils
     def _utility(self, p: int, node: _Node) -> float:
         s = node.sum
         row = self._rows[p]
@@ -201,7 +200,7 @@ class MCTSAgent(Agent):
             for _ in range(steps):
                 st.undo()
 
-    # ---------------------------------------------------------------- décision
+    # décision
     def _decide(self, state: GameState, moves: list[int]) -> tuple[int, SearchStats]:
         if len(moves) == 1 and self.forced_shortcut:
             self.last_root = {moves[0]: (0, math.nan)}

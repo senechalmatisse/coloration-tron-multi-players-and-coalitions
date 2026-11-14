@@ -1,4 +1,4 @@
-"""Palette lisible par les daltoniens (F6.1 [S]).
+"""Palette lisible par les daltoniens.
 
 Couleurs catégorielles validées (séparation CVD des paires adjacentes ≥ 8 en
 OKLab ×100, contraste ≥ 3:1 sur la surface sombre). Une teinte par équipe, dans

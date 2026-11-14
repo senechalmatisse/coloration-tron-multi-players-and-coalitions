@@ -1,4 +1,4 @@
-# P04 / P06 : MCTS face aux agents historiques (MaxN, Paranoid, Social, Greedy).
+# MCTS face aux agents historiques (MaxN, Paranoid, Social, Greedy).
 # Le solitaire (equipe suivie) change d'algorithme, l'adversaire est fixe dans
 # chaque condition : graines appariees et rotation complete des sieges, donc les
 # taux de victoire du solitaire se comparent algorithme contre algorithme sur les

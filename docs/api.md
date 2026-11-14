@@ -1,4 +1,4 @@
-# API Python publique (P11)
+# API Python publique
 
 `tron.api` est la façade stable du simulateur pour un notebook, un autre programme Python ou un outil externe, sans passer par la CLI. Les noms de `tron.api.__all__` forment l'API publique (version `API_VERSION = "1.0"`) ; ils sont aussi accessibles depuis le paquet (`tron.run_game`), chargés à la demande pour que `import tron` reste léger. Le reste du paquet (`tron.core`, `tron.sim`…) reste importable mais peut évoluer.
 
@@ -57,4 +57,4 @@ tron play configs/games/duel_20x20.yaml --no-gui --out /tmp/duel && python examp
 python examples/agent_personnalise.py
 ```
 
-Les quatre scripts sont exécutés par `tests/test_api.py`. Pour distribuer un agent ou une heuristique dans un paquet séparé, voir `docs/extensions.md`.
+Les quatre scripts sont exécutés par `tests/test_api.py`.

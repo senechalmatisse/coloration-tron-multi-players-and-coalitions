@@ -1,4 +1,4 @@
-"""Fenêtre Arcade de comparaison de deux rejeux (P17).
+"""Fenêtre Arcade de comparaison de deux rejeux.
 
 Deux plateaux côte à côte, synchronisés par :class:`ComparisonSession`, une ligne
 de temps d'événements sous chaque plateau et un panneau de comparaison. Touches :
@@ -179,7 +179,7 @@ class CompareWindow(arcade.Window if arcade is not None else object):  # type: i
     def neon(self) -> bool:
         return self.theme_name == "neon"
 
-    # -------------------------------------------------------------- dessin
+    # dessin
     def on_draw(self) -> None:
         if self.neon:
             self._draw_neon()
@@ -297,7 +297,7 @@ class CompareWindow(arcade.Window if arcade is not None else object):  # type: i
         self.t_events[side].text = " · ".join(f"{e.ply}: {e.text}" for e in recent) or "—"
         self.t_events[side].draw()
 
-    # ---------------------------------------------------------- événements
+    # événements
     def on_update(self, delta_time: float) -> None:
         self._clock += delta_time
         for arena in self.arenas:

@@ -31,7 +31,7 @@ def color_grid(state: GameState, palette: Palette, owners: np.ndarray | None = N
         free = g == FREE
         for p in range(state.n):
             img[free & (owners == p)] = palette.territory[p]
-    img[g == OBSTACLE] = palette.muted  # obstacles dynamiques (P09.3)
+    img[g == OBSTACLE] = palette.muted  # obstacles dynamiques
     for p in range(state.n):
         img[g == p] = palette.player[p] if state.is_alive(p) else palette.dead[p]
     for p in range(state.n):
@@ -43,8 +43,8 @@ def color_grid(state: GameState, palette: Palette, owners: np.ndarray | None = N
 def pv_path(state: GameState, moves: Sequence[int]) -> list[tuple[int, int, int]]:
     """Cases (joueur, x, y) parcourues par la suite de coups ``moves`` depuis ``state``.
 
-    Sert à dessiner la variante principale d'une décision. ``state`` n'est pas
-    modifié ; le parcours s'arrête à la fin de partie ou à un coup impossible.
+    Sert à dessiner la variante principale d'une décision. ``state`` n'est pas modifié ;
+    le parcours s'arrête à la fin de partie ou à un coup impossible.
     """
     st = state.copy(history=False)
     out: list[tuple[int, int, int]] = []
@@ -107,7 +107,7 @@ def render_frame(
 
 
 def _draw_zones(img: np.ndarray, state: GameState, palette: Palette, cell: int) -> None:
-    """Contour des zones du mode contrôle de zone (P09.2), à l'encre secondaire."""
+    """Contour des zones du mode contrôle de zone, à l'encre secondaire."""
     edge = 2 if cell >= 10 else 1
     for z in state.config.rules.zones:
         x0, y0 = z.x * cell, z.y * cell

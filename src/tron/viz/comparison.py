@@ -1,4 +1,4 @@
-"""Comparaison synchronisée de deux rejeux (P17), sans dépendance à Arcade.
+"""Comparaison synchronisée de deux rejeux, sans dépendance à Arcade.
 
 Deux journaux JSONL (``tron-log/1`` ou ``tron-log/2``) sont rejoués côte à côte,
 synchronisés par un curseur commun de demi-coup. Rien n'est recalculé par les
@@ -167,7 +167,7 @@ class ComparisonSession:
         ]
         self.ply = 0
 
-    # ---------------------------------------------------------------- curseur
+    # curseur
     @property
     def max_ply(self) -> int:
         return max(len(log.moves) for log in self.logs)
@@ -201,7 +201,7 @@ class ComparisonSession:
         """Vrai si le curseur dépasse la fin de ce journal (affichage figé sur l'état final)."""
         return self.ply > len(self.logs[side].moves)
 
-    # ---------------------------------------------------------------- données
+    # données
     def view(self, side: int) -> SideView:
         log = self.logs[side]
         src = self.sources[side]
@@ -307,7 +307,7 @@ class ComparisonSession:
         st = self.sources[side].state
         return None if st.is_terminal() else self._heur[side].owner_map(st)
 
-    # ----------------------------------------------------------------- images
+    # images
     def palettes(self) -> tuple[Palette, Palette]:
         return (
             make_palette(self.logs[0].config.team_index),

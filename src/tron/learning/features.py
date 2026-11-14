@@ -1,4 +1,4 @@
-"""Observations et caractéristiques pour l'apprentissage (P10), NumPy seulement.
+"""Observations et caractéristiques pour l'apprentissage, NumPy seulement.
 
 Deux encodages, tous deux **relatifs au joueur observateur** (indice relatif 0 :
 lui-même, puis les autres joueurs dans l'ordre de jeu), pour qu'une même

@@ -1,4 +1,4 @@
-"""Une partie sans affichage, son journal et son état final (API publique, P11).
+"""Une partie sans affichage, son journal et son état final.
 
 python examples/partie_unique.py configs/games/duel_20x20.yaml
 """

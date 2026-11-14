@@ -1,4 +1,4 @@
-"""Entraînement et évaluation de la politique linéaire de référence (P10).
+"""Entraînement et évaluation de la politique linéaire de référence.
 
 Algorithme : SARSA(0) semi-gradient sur les **états après coup**. À chaque
 décision, l'apprenant évalue l'état obtenu après chacun de ses coups légaux,

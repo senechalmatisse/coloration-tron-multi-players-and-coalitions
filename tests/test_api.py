@@ -1,4 +1,4 @@
-"""API Python publique (P11)."""
+"""API Python publique."""
 
 from __future__ import annotations
 

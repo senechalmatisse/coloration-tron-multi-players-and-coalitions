@@ -1,4 +1,4 @@
-# Modes de jeu (P09)
+# Modes de jeu
 
 Les variantes de Tron sont décrites par la clé `rules` de la configuration, jamais par des conditions codées dans les agents. Sans clé `rules`, la partie est classique et se déroule exactement comme avant.
 
@@ -31,7 +31,7 @@ En survie individuelle, `Valuation` n'accorde la valeur de victoire qu'au surviv
 
 Exemple : `tron play configs/games/survival_individual_12x12.yaml --no-gui`.
 
-Colonnes CSV ajoutées pour tous les modes : `rules_mode`, `individual_winner`, `survival_order`, puis `rounds` (tours complets, comptés seulement si les règles ont un état propre : zones, obstacles ou objectif `survive`), `team_scores` (contrôle de zone), `obstacles` (§ 3) et `end_reason` (§ 4).
+Colonnes CSV ajoutées pour tous les modes : `rules_mode`, `individual_winner`, `survival_order`, puis `rounds` (tours complets, comptés seulement si les règles ont un état propre : zones, obstacles ou objectif `survive`), `team_scores` (contrôle de zone), `obstacles` et `end_reason`.
 
 ## 2. Contrôle de zone (`zone_control`)
 
@@ -47,7 +47,7 @@ rules:
 ```
 
 **Comptage.** Un *tour* est complet quand chaque joueur vivant a joué une fois (le tour se termine quand l'ordre de jeu revient au premier joueur). À la fin de chaque tour, une zone rapporte **un point** à l'équipe de victoire qui y a, seule, au moins une tête vivante (règle `head`). Une zone vide, ou disputée par des têtes de plusieurs équipes, ne rapporte rien.
-
+-
 **Fin de partie et vainqueur**, dans cet ordre :
 
 1. une équipe atteint `target_score` : l'équipe au plus haut score gagne ;
@@ -64,7 +64,7 @@ En cas d'égalité au score, la seule équipe encore en vie parmi les meilleures
 
 **Sorties.** Colonnes CSV `rounds` et `team_scores` (`"14;10"`, dans l'ordre des équipes de victoire). Dans le journal, un coup qui termine un tour et change le contrôle d'une zone porte `"zone": [[zone, équipe], ...]` (−1 : zone vide ou disputée). Les sauvegardes (`tron-checkpoint/1`) conservent le tour, les scores, l'historique des points et les contrôleurs du dernier tour : la reprise produit les mêmes événements de zone que la partie continue.
 
-Dans la fenêtre Arcade et les exports d'images (PNG, GIF), les zones sont entourées à l'encre secondaire ; la ligne d'état du panneau ajoute le tour et les scores (`Lecture ×1 · tour 5 · A 3 – B 2`).
+Dans la fenêtre Arcade et les exports d'images (PNG, GIF), les zones sont entourées à l'encre secondaire ; la ligne d'état du panneau ajoute le tour et les scores (`Lecture ×1 · tour 5 · A 3 - B 2`).
 
 Exemple (zones dans les quatre coins, symétriques par quart de tour comme le placement `regular`, pour qu'aucune équipe ne soit avantagée par la géométrie) :
 

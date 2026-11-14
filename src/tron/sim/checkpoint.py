@@ -1,4 +1,4 @@
-"""Sauvegarde et reprise exacte d'une partie (P08).
+"""Sauvegarde et reprise exacte d'une partie.
 
 Un journal JSONL permet de **rejouer** une partie ; une sauvegarde permet de la
 **reprendre** sans rejouer les décisions et sans changer les décisions futures.
@@ -19,8 +19,7 @@ Les deux contrats sont distincts : la sauvegarde est un document JSON versionné
 L'écriture est atomique (fichier temporaire puis renommage) : une interruption ne
 laisse jamais une sauvegarde partielle à la place d'une sauvegarde valide.
 Limite : la durée mesurée (``duration``) et les temps de réflexion dépendent de la
-machine ; ils ne sont pas comparables entre une partie reprise et une partie d'un
-seul tenant.
+machine ; ils ne sont pas comparables entre une partie reprise et une partie d'un seul tenant.
 """
 
 from __future__ import annotations
@@ -109,7 +108,7 @@ def read_checkpoint(path: str | Path) -> dict[str, Any]:
 
 
 def _zone_controllers(state: GameState, saved: Any) -> list[int]:
-    """Contrôleurs des zones au dernier tour complet (événements ``zone`` exacts, P09.2)."""
+    """Contrôleurs des zones au dernier tour complet (événements ``zone`` exacts)."""
     rules = state._rules
     if rules is None:
         return []

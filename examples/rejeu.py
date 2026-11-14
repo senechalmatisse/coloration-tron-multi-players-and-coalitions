@@ -1,4 +1,4 @@
-"""Rejoue un journal JSONL coup par coup (API publique, P11).
+"""Rejoue un journal JSONL coup par coup.
 
 tron play configs/games/duel_20x20.yaml --no-gui --out /tmp/duel
 python examples/rejeu.py /tmp/duel/game_0000.jsonl

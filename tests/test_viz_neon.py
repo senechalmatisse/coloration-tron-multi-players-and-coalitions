@@ -92,7 +92,7 @@ def _extras(dirs: list[int]):
     return lambda ply: PlyExtras(direction=dirs[ply] if ply < len(dirs) else None)
 
 
-# --------------------------------------------------------------------- thème
+# thème
 def test_theme_colors_and_quality() -> None:
     theme = make_neon_theme([0, 1, 0, 1])
     assert len(theme.team) == 2 and theme.team[0] != theme.team[1]
@@ -142,7 +142,7 @@ def test_trail_metrics_scale_with_cell() -> None:
     assert low.sigma_wide == 0 and low.gain_wide == 0 and low.tile < trail_metrics(20).tile
 
 
-# --------------------------------------------------------------------- scène
+# scène
 def test_tracker_paths_masks_and_events() -> None:
     st, dirs = _scripted()
     tracker = SceneTracker()
@@ -257,7 +257,7 @@ def test_alliances_links_edges_and_stats() -> None:
     assert [e.kind for e in extras.diplomacy] == ["formed"]
 
 
-# ------------------------------------------------------------------ tuiles
+# tuiles
 def test_stroke_tiles_are_disjoint_and_sum_to_a_line() -> None:
     cell, width, margin = 10, 4.0, 10
     size = cell + 2 * margin
@@ -321,7 +321,7 @@ def test_arena_background() -> None:
     assert low.shape == bg.shape and not np.array_equal(low, bg)
 
 
-# --------------------------------------------------------------- rendu NumPy
+# rendu NumPy
 def test_render_neon_colors_and_size() -> None:
     st, _ = _scripted()
     img = render_neon(st, cell=20, labels=False)
@@ -397,7 +397,7 @@ def test_render_obstacles() -> None:
     assert pix[0] > pix[2]  # liseré orangé de l'obstacle
 
 
-# ------------------------------------------------------------------- effets
+# effets
 def test_particles_deterministic_and_bounded() -> None:
     a, b = ParticleSystem(10, seed=3), ParticleSystem(10, seed=3)
     for ps in (a, b):
@@ -489,7 +489,7 @@ def test_effect_director_other_events() -> None:
     assert not director.active_links() and not director.active_rings()
 
 
-# ----------------------------------------------------------------------- HUD
+# HUD
 def test_hud_cards_stats_and_log() -> None:
     cfg = make_config(5, 5, 3, agents="greedy", teams=["A", "B", "A"])
     st = GameState(cfg, positions=[(0, 0), (2, 2), (4, 4)])
@@ -547,7 +547,7 @@ def test_describe_every_event_kind() -> None:
     assert describe_event(VisualEvent("turn", 1, player=0), st, theme) is None
 
 
-# --------------------------------------------------------- contrôleur, exports
+# contrôleur, exports
 @pytest.fixture
 def neon_log(tmp_path: Path) -> Path:
     path = tmp_path / "neon.jsonl"

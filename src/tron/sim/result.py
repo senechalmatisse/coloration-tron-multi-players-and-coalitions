@@ -1,4 +1,4 @@
-"""Résultat d'une partie (F1.5, F5.5)."""
+"""Résultat d'une partie."""
 
 from __future__ import annotations
 
@@ -57,7 +57,7 @@ def git_hash() -> str:
 
 @cache
 def environment_info() -> dict[str, str]:
-    """Versions du code et des bibliothèques (traçabilité, §7.3)."""
+    """Versions du code et des bibliothèques."""
     return {
         "code_version": tron.__version__,
         "git_hash": git_hash(),
@@ -82,7 +82,7 @@ class PlayerTotals:
 
 @dataclass(frozen=True, slots=True)
 class MatchMetrics:
-    """Métriques de coopération, de cohésion et de stabilité d'une partie (P02).
+    """Métriques de coopération, de cohésion et de stabilité d'une partie.
 
     Les définitions opérationnelles sont dans :mod:`tron.sim.metrics`. Les
     tuples « par équipe » suivent l'ordre de ``GameConfig.team_names`` (l'équipe
@@ -147,19 +147,19 @@ class MatchResult:
     positions: tuple[tuple[int, int], ...]
     metrics: MatchMetrics | None = None
     mode: str = "classic"
-    """Mode de jeu (P09)."""
+    """Mode de jeu."""
     individual_winner: int | None = None
     """Vainqueur individuel : dernier survivant en survie individuelle, ou seul survivant."""
     survival_order: tuple[int, ...] = ()
     """Joueurs du plus long au plus court temps de survie (à égalité, ordre des indices)."""
     rounds: int = 0
-    """Tours complets joués (modes à règles, P09 ; 0 sinon)."""
+    """Tours complets joués (modes à règles ; 0 sinon)."""
     scores: tuple[int, ...] = ()
     """Score de chaque équipe de victoire (contrôle de zone) ; vide sinon."""
     obstacles: int = 0
-    """Obstacles dynamiques posés pendant la partie (P09.3)."""
+    """Obstacles dynamiques posés pendant la partie."""
     end_reason: str = "elimination"
-    """Cause de fin : ``elimination``, ``survive``, ``target_score`` ou ``max_rounds`` (P09)."""
+    """Cause de fin : ``elimination``, ``survive``, ``target_score`` ou ``max_rounds``."""
 
     @property
     def n_players(self) -> int:

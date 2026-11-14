@@ -1,4 +1,4 @@
-"""Extensions installées (P12) : agents et heuristiques déclarés par *entry points*.
+"""Extensions installées : agents et heuristiques déclarés par *entry points*.
 
 Un paquet Python ajoute un agent ou une heuristique sans modifier ce dépôt en
 déclarant, dans son ``pyproject.toml`` :
@@ -27,8 +27,7 @@ Règles :
   :class:`PluginWarning`, sans empêcher l'import de Tron ;
 * ``TRON_NO_PLUGINS=1`` désactive la découverte (campagnes reproductibles) ;
 * aucun code n'est jamais chargé depuis un chemin écrit dans une configuration :
-  seuls les noms enregistrés (intégrés ou déclarés par un paquet installé) sont
-  acceptés.
+  seuls les noms enregistrés (intégrés ou déclarés par un paquet installé) sont acceptés.
 
 ``tron plugins list`` affiche les extensions, leur paquet, leur cible et leur état.
 """

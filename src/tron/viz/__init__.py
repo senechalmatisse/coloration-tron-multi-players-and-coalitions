@@ -1,7 +1,7 @@
 """Visualisation : palette, rendu NumPy, contrôle de lecture, exports, fenêtre arcade.
 
 La fenêtre arcade (``tron.viz.arcade_app``) est importée à la demande : le reste
-du paquet, et a fortiori le moteur, fonctionne sans affichage (F6.5).
+du paquet, et a fortiori le moteur, fonctionne sans affichage.
 """
 
 from tron.viz.controller import LiveSource, PanelInfo, PlaybackController, ReplaySource

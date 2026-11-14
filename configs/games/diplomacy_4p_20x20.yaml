@@ -1,9 +1,9 @@
-# Diplomatie tactique (P03) : alliances souples qui modifient seulement les
+# Diplomatie tactique: alliances souples qui modifient seulement les
 # preferences sociales (matrice W) des agents qui les exploitent. Les equipes
 # permanentes ci-dessous et la condition de victoire ne changent pas.
 # free_action: true rend explicite l'hypothese de la V1 (une action
-# diplomatique ne coute pas de demi-coup). L'outsider est un agent adaptatif
-# (P05) qui propose une alliance aux adversaires juges cooperatifs.
+# diplomatique ne coute pas de demi-coup).
+# L'outsider est un agent adaptatif qui propose une alliance aux adversaires juges cooperatifs.
 name: diplomacy_example
 grid: 20
 seed: 42

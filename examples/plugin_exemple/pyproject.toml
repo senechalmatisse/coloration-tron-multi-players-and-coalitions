@@ -1,4 +1,4 @@
-# Extension externe d'exemple (P12) : un agent et une heuristique declares par
+# Extension externe d'exemple : un agent et une heuristique declares par
 # entry points, sans modifier le depot Tron.
 #   pip install -e examples/plugin_exemple
 #   tron plugins list

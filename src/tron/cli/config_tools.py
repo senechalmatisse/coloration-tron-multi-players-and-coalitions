@@ -1,4 +1,4 @@
-"""Outils de configuration (P15) : validation, forme normalisée, modèles, catalogues.
+"""Outils de configuration : validation, forme normalisée, modèles, catalogues.
 
 Commandes associées : ``tron config validate|show|template``, ``tron agents list``
 et ``tron heuristics list``. Le type d'un fichier (partie, plan d'expériences,
@@ -145,18 +145,18 @@ def dump(data: Mapping[str, Any], fmt: str = "yaml") -> str:
     return text
 
 
-# ------------------------------------------------------------------ modèles
+# modèles
 TEMPLATES: dict[str, str] = {
     "game": """\
 # Partie simple : quatre joueurs, deux equipes (tron config template game).
 #   tron config validate partie.yaml && tron play partie.yaml
 name: ma_partie
-grid: 20                      # ou {width: 30, height: 20}
-seed: 1                       # tout l'alea derive de cette graine
+grid: 20                                                  # ou {width: 30, height: 20}
+seed: 1                                                   # tout l'alea derive de cette graine
 first_player: 0
-placement: {mode: regular, radius: 0.35, rotate: true}   # regular | random | manual
+placement: {mode: regular, radius: 0.35, rotate: true}    # regular | random | manual
 heuristic: {name: voronoi, tie: order}                    # voronoi | composite | zone
-players:                      # agents : tron agents list
+players:                                                  # agents : tron agents list
   - {name: p1, team: A, agent: paranoid, depth: 4}
   - {name: m1, team: B, agent: maxn, depth: 3}
   - {name: p2, team: A, agent: greedy}
@@ -191,9 +191,9 @@ diplomacy:
   betrayal_penalty: 0.0
   break_cooldown_plies: 4
 players:
-  - {name: j1, team: J1, agent: social, depth: 3, profile: dynamic_team}
-  - {name: j2, team: J2, agent: social, depth: 3, profile: dynamic_team}
-  - {name: j3, team: J3, agent: social, depth: 3, profile: dynamic_team}
+  - {name: j1, team: J1, agent: social,   depth: 3, profile: dynamic_team}
+  - {name: j2, team: J2, agent: social,   depth: 3, profile: dynamic_team}
+  - {name: j3, team: J3, agent: social,   depth: 3, profile: dynamic_team}
   - {name: j4, team: J4, agent: paranoid, depth: 3}
 """,
     "zone": """\
@@ -210,7 +210,7 @@ rules:
   max_rounds: 120
 players:
   - {name: a1, team: A, agent: social, depth: 2, profile: team}
-  - {name: b1, team: B, agent: maxn, depth: 2}
+  - {name: b1, team: B, agent: maxn,   depth: 2}
   - {name: a2, team: A, agent: social, depth: 2, profile: team}
   - {name: b2, team: B, agent: greedy}
 """,
@@ -243,7 +243,7 @@ game:
   seed: 3
   placement: {mode: regular, rotate: true}
   players:
-    - {name: apprenant, team: A, agent: greedy}
+    - {name: apprenant,  team: A, agent: greedy}
     - {name: adversaire, team: B, agent: greedy}
 player: 0
 seed: 7
@@ -273,7 +273,7 @@ def write_template(name: str, out: str | Path | None, force: bool = False) -> st
     return text
 
 
-# --------------------------------------------------------------- catalogues
+# catalogues
 def _doc(cls: type) -> str:
     doc = inspect.getdoc(cls) or ""
     return doc.splitlines()[0] if doc else ""

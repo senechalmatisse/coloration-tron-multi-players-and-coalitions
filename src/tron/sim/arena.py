@@ -1,8 +1,8 @@
-"""Arène : une ou plusieurs parties d'une même configuration (F5.2).
+"""Arène : une ou plusieurs parties d'une même configuration.
 
 Chaque partie reçoit une graine dérivée de la graine de la configuration et du
-numéro de partie, et le premier joueur tourne d'une partie à l'autre (F1.2). Un
-résultat CSV et, sur demande, un journal JSONL rejouable sont produits par partie.
+numéro de partie, et le premier joueur tourne d'une partie à l'autre.
+Un résultat CSV et, sur demande, un journal JSONL rejouable sont produits par partie.
 """
 
 from __future__ import annotations

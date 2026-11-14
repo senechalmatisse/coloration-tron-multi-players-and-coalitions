@@ -1,10 +1,9 @@
-"""Régression logistique de la victoire (F7.3).
+"""Régression logistique de la victoire.
 
 Avec statsmodels, le modèle est ajusté par ``smf.logit`` avec des erreurs
 standard groupées par graine (parties appariées). Sans statsmodels, un
 ajustement IRLS en NumPy fournit les mêmes coefficients et une variance robuste
-« sandwich » groupée. Le repli comprend les termes ``a``, ``log2(a)``, ``a:b`` et
-``a*b`` (= a + b + a:b).
+« sandwich » groupée. Le repli comprend les termes ``a``, ``log2(a)``, ``a:b`` et ``a*b`` (= a + b + a:b).
 
 Les facteurs sont désignés sans leur préfixe ``f_`` (``solo_depth``, ``k``…).
 
@@ -195,7 +194,7 @@ def fit_logit(
     return _fit_numpy(data, formula, cluster)
 
 
-# ------------------------------------------------------------------ repli
+# repli
 def _parse(formula: str) -> tuple[str, list[str]]:
     left, right = (s.strip() for s in formula.split("~"))
     terms: list[str] = []

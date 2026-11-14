@@ -1,4 +1,4 @@
-"""Tests de l'heuristique de Voronoi et de la valeur des feuilles (jalon J3)."""
+"""Tests de l'heuristique de Voronoi et de la valeur des feuilles."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from tron.eval import (
 )
 
 
-# ------------------------------------------------------------- référence naïve
+# référence naïve
 def _bfs(st: GameState, start: int) -> dict[int, int]:
     dist = {start: 0}
     queue = deque([start])
@@ -98,7 +98,7 @@ def random_state(
     return st
 
 
-# ------------------------------------------------------------------- tests
+# tests
 def test_corridor_tie_modes() -> None:
     cfg = make_config(5, 5, 2, placement={"positions": [[0, 2], [4, 2]]})
     st = GameState(cfg)
@@ -192,7 +192,7 @@ def test_make_heuristic_and_errors() -> None:
     warmup()
 
 
-# --------------------------------------------------------------- valuation
+# valuation
 def test_valuation_terminal_dominance_and_bounds() -> None:
     rng = random.Random(3)
     cfg = make_config(7, 7, 4, teams=["A", "B", "A", "C"])

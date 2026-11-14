@@ -74,7 +74,7 @@ class Canvas:
     def flip(self, y: float) -> float:
         return self.h - y
 
-    # -------------------------------------------------------------- formes
+    # formes
     def rect(
         self, left: float, r: float, b: float, t: float, color: Any, outline: float = 0
     ) -> None:

@@ -17,8 +17,7 @@ Facteurs communs aux scénarios ``solo_vs_coalition`` et ``teams`` :
 * heuristique : ``heuristic_name`` et les poids ``w_territory``, ``w_mobility``,
   ``w_connectivity``, ``w_safety``, ``w_bottleneck`` (heuristique ``composite``) ;
 * diplomatie : ``diplomacy_enabled``, ``proposal_ttl_plies``,
-  ``max_allies_per_player``, ``alliance_weight``, ``betrayal_penalty``,
-  ``break_cooldown_plies`` ;
+  ``max_allies_per_player``, ``alliance_weight``, ``betrayal_penalty``, ``break_cooldown_plies`` ;
 * heuristique propre au solitaire : ``solo_heuristic`` (nom ou dictionnaire) ;
 * ablation : ``ablate`` (``none`` ou une composante de l'heuristique composite,
   mise à zéro) : sur l'heuristique du solitaire si ``solo_heuristic`` est

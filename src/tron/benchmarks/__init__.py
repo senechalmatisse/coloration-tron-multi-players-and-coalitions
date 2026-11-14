@@ -1,4 +1,4 @@
-"""Mesures de performance reproductibles (P13) : jeux de positions et suite de mesures."""
+"""Mesures de performance reproductibles : jeux de positions et suite de mesures."""
 
 from tron.benchmarks.positions import (
     PHASES,

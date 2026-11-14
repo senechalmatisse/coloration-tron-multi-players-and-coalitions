@@ -1,4 +1,4 @@
-"""Suite de mesures de performance (P13) : composants mesurés séparément.
+"""Suite de mesures de performance : composants mesurés séparément.
 
 Chaque mesure tourne sur le même jeu de positions déterministe
 (:func:`tron.benchmarks.positions.position_set`), avec des nombres de
@@ -381,7 +381,7 @@ def comparison_text(rows: Sequence[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
-# ------------------------------------------------------------------ profilage
+# profilage
 def profile(
     fn: Callable[[], Any], *, sort: str = "cumulative", limit: int = 25
 ) -> tuple[str, list[dict[str, Any]], pstats.Stats]:
@@ -414,7 +414,7 @@ def profile(
     return buf.getvalue(), rows, stats
 
 
-# --------------------------------------------------------------- campagnes
+# campagnes
 _LAUNCHER = (
     "import json, resource, subprocess, sys\n"
     "proc = subprocess.run(sys.argv[1:], capture_output=True, text=True)\n"

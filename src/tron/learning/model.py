@@ -1,4 +1,4 @@
-"""Modèle linéaire de référence (P10) : valeur d'un état après coup, V = w · φ.
+"""Modèle linéaire de référence : valeur d'un état après coup, V = w · φ.
 
 Le modèle s'exporte en JSON (format ``tron-model/1``) : poids, jeu de
 caractéristiques, métadonnées d'entraînement. Il se recharge et joue avec NumPy
@@ -62,7 +62,7 @@ class LinearModel:
     def copy(self) -> LinearModel:
         return LinearModel(self.weights.copy(), dict(self.metadata))
 
-    # -------------------------------------------------------- sérialisation
+    # sérialisation
     def to_dict(self) -> dict[str, Any]:
         return {
             "format": MODEL_FORMAT,

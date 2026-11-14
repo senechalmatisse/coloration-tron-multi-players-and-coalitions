@@ -1,4 +1,4 @@
-"""Valeur des feuilles de l'arbre de recherche (F2.2, F2.3).
+"""Valeur des feuilles de l'arbre de recherche.
 
 Tous les moteurs partagent un même codage du vecteur v (une composante par joueur) :
 
@@ -39,7 +39,7 @@ class Valuation:
     def __init__(self, config: GameConfig, heuristic: Heuristic) -> None:
         n = config.n_players
         self.n = n
-        self.team = list(config.victory_team_index)  # équipes qui gagnent (P09)
+        self.team = list(config.victory_team_index)  # équipes qui gagnent
         self.heuristic = heuristic
         self.mu = WIN_BONUS
         self.cap = PLY_CAP
@@ -76,7 +76,7 @@ class Valuation:
                 return [
                     win if team[p] == winner else self.dead_value(d[p] - root_ply) for p in range(n)
                 ]
-            # Égalité (P09) : les vivants se partagent la valeur comme sur une feuille.
+            # Égalité : les vivants se partagent la valeur comme sur une feuille.
         h = self.heuristic.shares(state)
         a = state._a
         return [h[p] if a[p] else self.dead_value(d[p] - root_ply) for p in range(n)]

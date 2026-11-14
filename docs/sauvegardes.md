@@ -1,4 +1,4 @@
-# Sauvegarde et reprise exacte d'une partie (P08)
+# Sauvegarde et reprise exacte d'une partie
 
 Un journal JSONL permet de **rejouer** une partie coup par coup. Une sauvegarde permet de la **reprendre** : l'état courant et la mémoire des agents sont restaurés sans rejouer les décisions, et la suite de la partie est identique à celle d'une partie jouée d'un seul tenant. Les deux formats sont distincts.
 

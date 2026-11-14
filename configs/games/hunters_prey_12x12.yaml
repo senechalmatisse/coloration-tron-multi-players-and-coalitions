@@ -1,4 +1,4 @@
-# Equipes asymetriques (P09.4) : chaque equipe recoit son objectif.
+# Equipes asymetriques : chaque equipe recoit son objectif.
 # - hunters (2 joueurs) : eliminate (defaut) -> gagner en restant seuls en vie ;
 # - prey (1 joueur) : survive -> gagner des la fin du 32e tour complet s'il vit
 #   encore ; les chasseurs doivent donc l'eliminer avant.

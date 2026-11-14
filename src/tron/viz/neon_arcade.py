@@ -156,7 +156,7 @@ class NeonArena:
         self._key = f"{hash(theme) & 0xFFFFFFFF:08x}"
         self._build()
 
-    # ----------------------------------------------------------- repères
+    # repères
     @property
     def pixel_width(self) -> int:
         return self.width * self.cell
@@ -174,7 +174,7 @@ class NeonArena:
         """Position écran d'un point exprimé en cases (y vers le bas)."""
         return self.left + u * self.cell, self.bottom + (self.height - v) * self.cell
 
-    # ------------------------------------------------------------ textures
+    # textures
     def _glow_tex(self, mask: int) -> Any:
         m = self.metrics
         return self.bank.get(
@@ -197,7 +197,7 @@ class NeonArena:
     def _dot_tex(self, radius: int) -> Any:
         return self.bank.get(f"dot:{radius}", lambda: glow_rgba(soft_dot(radius)))
 
-    # -------------------------------------------------------------- scène
+    # scène
     def _build(self) -> None:
         arc, c = self.arc, self.cell
         theme = self.theme
@@ -282,7 +282,7 @@ class NeonArena:
     def update(self, dt: float) -> None:
         self.effects.update(dt)
 
-    # ------------------------------------------------------------ traces
+    # traces
     def _sync_trails(self, result: SyncResult) -> None:
         arc, tr = self.arc, self.tracker
         full = result.reset or tr.grid_mode or (bool(result.added) and bool(result.removed))
@@ -331,7 +331,7 @@ class NeonArena:
                 g.color = glow
                 cs.color = core
 
-    # ------------------------------------------------------------- sol
+    # sol
     def _sync_floor(self, state: GameState, owners: np.ndarray | None) -> None:
         key = (id(owners), state.key if owners is not None else 0, state.ply)
         if key == self._floor_key:
@@ -372,7 +372,7 @@ class NeonArena:
                 self._obstacles[cell] = sprite
                 self.obstacle_list.append(sprite)
 
-    # ------------------------------------------------------------- dessin
+    # dessin
     def draw(
         self,
         state: GameState,

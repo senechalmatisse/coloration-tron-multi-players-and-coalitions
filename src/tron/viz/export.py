@@ -1,8 +1,7 @@
-"""Export d'une partie en GIF ou MP4 et captures PNG (F6.2, F6.4).
+"""Export d'une partie en GIF ou MP4 et captures PNG.
 
-``theme="neon"`` produit les images du thème néon (:mod:`tron.viz.neon`),
-effets animés compris ; ``classic`` (valeur par défaut de la bibliothèque) garde
-le rendu d'origine.
+``theme="neon"`` produit les images du thème néon (:mod:`tron.viz.neon`), effets animés compris ;
+``classic`` (valeur par défaut de la bibliothèque) garde le rendu d'origine.
 """
 
 from __future__ import annotations

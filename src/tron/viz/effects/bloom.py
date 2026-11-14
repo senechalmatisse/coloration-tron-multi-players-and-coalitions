@@ -2,8 +2,7 @@
 
 Étapes, après le dessin de l'arène dans une texture hors écran :
 
-1. extraction des pixels lumineux (seuil progressif) dans une texture à
-   demi-résolution ;
+1. extraction des pixels lumineux (seuil progressif) dans une texture à demi-résolution ;
 2. flou gaussien séparable, horizontal puis vertical (``passes`` allers-retours) ;
 3. composition additive de la scène et du halo flouté à l'écran.
 
@@ -49,7 +48,7 @@ class Bloom:
         self._ready = False
         self._active = False
 
-    # ------------------------------------------------------------ ressources
+    # ressources
     def _setup(self) -> None:
         from arcade.gl import geometry  # noqa: PLC0415 - Arcade seulement à la demande
 
@@ -96,7 +95,7 @@ class Bloom:
         with contextlib.suppress(Exception):  # contexte peut-être inutilisable
             self.window.ctx.screen.use()
 
-    # --------------------------------------------------------------- image
+    # image
     def begin(self, clear_color: tuple[int, int, int]) -> bool:
         """Redirige le dessin vers la texture de scène ; ``False`` si le bloom est indisponible."""
         if not self.enabled:

@@ -1,8 +1,7 @@
-"""Agent joué par un modèle appris (P10).
+"""Agent joué par un modèle appris.
 
 Le modèle est un fichier JSON ``tron-model/1`` (voir :mod:`tron.learning.model`) :
-le charger ne demande que NumPy, jamais le code d'entraînement. Dans une
-configuration de partie :
+le charger ne demande que NumPy, jamais le code d'entraînement. Dans une configuration de partie :
 
 .. code-block:: yaml
 

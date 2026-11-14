@@ -1,4 +1,4 @@
-"""Un agent personnalisé, enregistré puis utilisé dans une partie (API publique, P11).
+"""Un agent personnalisé, enregistré puis utilisé dans une partie.
 
 L'agent « prudent » joue le coup qui laisse le plus de cases voisines libres à sa
 nouvelle tête ; il respecte le contrat des agents : l'état reçu est rendu intact

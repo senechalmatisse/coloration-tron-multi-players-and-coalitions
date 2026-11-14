@@ -1,4 +1,4 @@
-"""Interface commune des agents et registre (F3.1, F3.7, extensibilité)."""
+"""Interface commune des agents et registre."""
 
 from __future__ import annotations
 
@@ -126,7 +126,7 @@ class Decision:
 
 
 class Agent(ABC):
-    """Agent : ``choose_move(state, player) → Decision`` (F3.1).
+    """Agent : ``choose_move(state, player) → Decision``.
 
     Paramètres communs : ``depth`` (plies), ``rounds`` (tours complets : la
     profondeur vaut alors rounds × joueurs vivants), ``tie_break`` (``random``
@@ -218,13 +218,13 @@ class Agent(ABC):
         """Choisit parmi ``moves`` (au moins un coup légal)."""
 
     def pick(self, ties: Sequence[int]) -> int:
-        """Départage des coups de même valeur (F3.7)."""
+        """Départage des coups de même valeur."""
         ordered = sorted(ties)
         if self.tie_break == "fixed" or len(ordered) == 1:
             return ordered[0]
         return ordered[int(self.rng.integers(len(ordered)))]
 
-    def reset(self) -> None:  # noqa: B027 - crochet facultatif, vide par défaut
+    def reset(self) -> None:
         """Réinitialise la mémoire de l'agent (nouvelle partie)."""
 
     def snapshot_state(self) -> dict[str, Any]:
@@ -242,7 +242,7 @@ class Agent(ABC):
         except (KeyError, TypeError, ValueError) as exc:
             raise ValueError(f"état aléatoire invalide pour l'agent {self.name}") from exc
 
-    def observe_move(  # noqa: B027 - crochet facultatif, vide par défaut
+    def observe_move(
         self,
         player: int,
         direction: int,
@@ -251,7 +251,7 @@ class Agent(ABC):
         eliminated: bool,
         state: GameState,
     ) -> None:
-        """Crochet d'observation appelé après chaque demi-coup de la partie (P05).
+        """Crochet d'observation appelé après chaque demi-coup de la partie.
 
         ``state`` est l'état réel **après** le coup : il ne doit pas être modifié
         (travailler sur ``state.copy()``). Les agents qui n'en ont pas besoin
@@ -284,7 +284,7 @@ def _with_time(stats: SearchStats, elapsed: float) -> SearchStats:
     )
 
 
-# --------------------------------------------------------------- registre
+# registre
 AGENTS: dict[str, type[Agent]] = {}
 
 
@@ -308,7 +308,7 @@ def make_agent(name: str, player: int, config: GameConfig, **params: Any) -> Age
         if ":" in name or "." in name or "/" in name:
             hint = (
                 " ; un chemin de module n'est jamais chargé depuis une configuration : "
-                "déclarer un entry point tron.agents (docs/extensions.md)"
+                "déclarer un entry point tron.agents"
             )
         raise ConfigError(f"agent inconnu : {name} (connus : {sorted(AGENTS)}){hint}") from None
     try:

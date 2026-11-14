@@ -1,4 +1,4 @@
-"""Tests de la visualisation (jalon J2) : palette, rendu, contrôle de lecture, exports."""
+"""Tests de la visualisation : palette, rendu, contrôle de lecture, exports."""
 
 from __future__ import annotations
 
@@ -159,7 +159,7 @@ def test_exports(tmp_path: Path, log_path: Path) -> None:
     assert mp4.exists() and mp4.stat().st_size > 0
 
 
-# --------------------------------------------- fenêtre arcade (bouchon d'API)
+# fenêtre arcade (mock API)
 class _Stub:
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.args = args
